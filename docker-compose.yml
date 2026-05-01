@@ -40,6 +40,23 @@ services:
     networks:
       - course_net
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: course_backend
+    restart: always
+    depends_on:
+      - mysql
+      - redis
+      - minio
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    networks:
+      - course_net
+
 networks:
   course_net:
 
