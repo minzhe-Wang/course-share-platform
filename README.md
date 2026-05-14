@@ -50,7 +50,25 @@ powershell -ExecutionPolicy Bypass -File .\backend\scripts\api-smoke-test.ps1
 
 ## 文档
 
-- Docker 部署教程：`docs/Docker部署教程.md`
-- 后端部署细节：`backend/DEPLOYMENT.md`
-- API 接口文档：`docs/api接口文档.md`
-- 数据库设计：`docs/数据库设计.md`
+第一次运行、开发或排错时，可以按下面的目标查文档：
+
+| 你要做什么 | 看哪个文档 |
+| --- | --- |
+| 第一次安装环境、拉取项目、运行项目 | `docs/项目使用指南.md` |
+| 只想用 Docker 一键部署 | `docs/Docker部署教程.md` |
+| 查看后端 Docker 配置、环境变量、健康检查 | `backend/DEPLOYMENT.md` |
+| 对接接口、导入 Apifox、查看请求和返回字段 | `docs/api接口文档.md` |
+| 理解数据库表结构、字段含义、初始化数据 | `docs/数据库设计.md` |
+| 理解系统架构、模块划分、业务流程 | `docs/设计文档.md` |
+| 了解代码命名、分层、返回格式、异常处理约定 | `docs/代码风格约定.md` |
+| 查看后续还要完善什么 | `docs/后续完善计划.md` |
+
+推荐阅读顺序：
+
+```text
+docs/项目使用指南.md
+-> docs/Docker部署教程.md
+-> docs/api接口文档.md
+-> docs/设计文档.md
+-> docs/数据库设计.md
+```
