@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.14</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.example</groupId>
 	<artifactId>backend</artifactId>
@@ -79,6 +79,17 @@
 			<version>3.0.5</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- BCrypt password encoding only, without full Spring Security login interception. -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.minio</groupId>
+			<artifactId>minio</artifactId>
+			<version>8.5.17</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -137,5 +148,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
