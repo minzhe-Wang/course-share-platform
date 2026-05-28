@@ -56,43 +56,43 @@ INSERT IGNORE INTO sys_user (username, password, nickname, role, phone, email) V
 ('chen', '$2a$10$pFlEa5KtuaDLZ2ZApaWMbeSUOWxoU9CVzf21aPUbj7lldH9N4G5Qy', '实验助教 Chen', 'STUDENT', '13800000003', 'chen@example.com');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '软件工程课程设计验收模板', '覆盖需求分析、类图、顺序图、Docker 部署和答辩讲解，可直接作为课程设计验收参考。', c.id, 'http://localhost:9000/course-material/materials/demo-software-engineering.pdf', 'materials/demo-software-engineering.pdf', 'software-engineering-demo.pdf', 'PDF', 42896, u.id, 'APPROVED', '词库审核通过', NOW(), 156, 42, 37, 28, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)
+SELECT '软件工程课程设计验收模板', '覆盖需求分析、类图、顺序图、Docker 部署和答辩讲解，可直接作为课程设计验收参考。', c.id, '/api/files/download?fileKey=materials%2Fdemo-software-engineering.pdf', 'materials/demo-software-engineering.pdf', 'software-engineering-demo.pdf', 'PDF', 42896, u.id, 'APPROVED', '词库审核通过', NOW(), 156, 42, 37, 28, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '软件工程' AND u.username = 'alice'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-software-engineering.pdf');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '数据库原理期末复习提纲', '整理 ER 图、范式、事务隔离级别、索引和 SQL 优化常见题型。', c.id, 'http://localhost:9000/course-material/materials/demo-database-review.pdf', 'materials/demo-database-review.pdf', 'database-review.pdf', 'PDF', 38920, u.id, 'APPROVED', '词库审核通过', NOW(), 98, 26, 21, 18, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)
+SELECT '数据库原理期末复习提纲', '整理 ER 图、范式、事务隔离级别、索引和 SQL 优化常见题型。', c.id, '/api/files/download?fileKey=materials%2Fdemo-database-review.pdf', 'materials/demo-database-review.pdf', 'database-review.pdf', 'PDF', 38920, u.id, 'APPROVED', '词库审核通过', NOW(), 98, 26, 21, 18, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '数据库原理' AND u.username = 'student'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-database-review.pdf');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '计算机网络实验指导合集', '包含 Socket 编程、HTTP 抓包、DNS 查询和 TCP 三次握手实验记录模板。', c.id, 'http://localhost:9000/course-material/materials/demo-network-lab.docx', 'materials/demo-network-lab.docx', 'network-lab-guide.docx', 'DOCX', 51200, u.id, 'APPROVED', '词库审核通过', NOW(), 87, 19, 18, 12, 1, DATE_SUB(NOW(), INTERVAL 3 DAY)
+SELECT '计算机网络实验指导合集', '包含 Socket 编程、HTTP 抓包、DNS 查询和 TCP 三次握手实验记录模板。', c.id, '/api/files/download?fileKey=materials%2Fdemo-network-lab.docx', 'materials/demo-network-lab.docx', 'network-lab-guide.docx', 'DOCX', 51200, u.id, 'APPROVED', '词库审核通过', NOW(), 87, 19, 18, 12, 1, DATE_SUB(NOW(), INTERVAL 3 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '计算机网络' AND u.username = 'alice'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-network-lab.docx');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '数据结构常见算法笔记', '覆盖链表、栈、队列、树、图、排序和动态规划的课堂笔记。', c.id, 'http://localhost:9000/course-material/materials/demo-data-structure.pdf', 'materials/demo-data-structure.pdf', 'data-structure-notes.pdf', 'PDF', 35600, u.id, 'APPROVED', '词库审核通过', NOW(), 116, 33, 29, 20, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)
+SELECT '数据结构常见算法笔记', '覆盖链表、栈、队列、树、图、排序和动态规划的课堂笔记。', c.id, '/api/files/download?fileKey=materials%2Fdemo-data-structure.pdf', 'materials/demo-data-structure.pdf', 'data-structure-notes.pdf', 'PDF', 35600, u.id, 'APPROVED', '词库审核通过', NOW(), 116, 33, 29, 20, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '数据结构' AND u.username = 'chen'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-data-structure.pdf');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT 'Java Web 项目脚手架示例', '一个适合课程实训的 Spring Boot + Vue 前后端分离项目结构示例。', c.id, 'http://localhost:9000/course-material/materials/demo-java-web.zip', 'materials/demo-java-web.zip', 'java-web-starter.zip', 'ZIP', 102400, u.id, 'APPROVED', '词库审核通过', NOW(), 82, 25, 17, 14, 1, DATE_SUB(NOW(), INTERVAL 5 DAY)
+SELECT 'Java Web 项目脚手架示例', '一个适合课程实训的 Spring Boot + Vue 前后端分离项目结构示例。', c.id, '/api/files/download?fileKey=materials%2Fdemo-java-web.zip', 'materials/demo-java-web.zip', 'java-web-starter.zip', 'ZIP', 102400, u.id, 'APPROVED', '词库审核通过', NOW(), 82, 25, 17, 14, 1, DATE_SUB(NOW(), INTERVAL 5 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = 'Web 开发技术' AND u.username = 'bob'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-java-web.zip');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '操作系统进程线程速记卡', '用对比表整理进程、线程、同步互斥、死锁必要条件和银行家算法。', c.id, 'http://localhost:9000/course-material/materials/demo-os-process.pdf', 'materials/demo-os-process.pdf', 'os-process-thread.pdf', 'PDF', 28600, u.id, 'APPROVED', '词库审核通过', NOW(), 69, 13, 16, 9, 1, DATE_SUB(NOW(), INTERVAL 6 DAY)
+SELECT '操作系统进程线程速记卡', '用对比表整理进程、线程、同步互斥、死锁必要条件和银行家算法。', c.id, '/api/files/download?fileKey=materials%2Fdemo-os-process.pdf', 'materials/demo-os-process.pdf', 'os-process-thread.pdf', 'PDF', 28600, u.id, 'APPROVED', '词库审核通过', NOW(), 69, 13, 16, 9, 1, DATE_SUB(NOW(), INTERVAL 6 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '操作系统' AND u.username = 'chen'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-os-process.pdf');
 
 INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time)
-SELECT '违规广告资料示例', '包含广告引流内容，应该被词库审核拒绝，不会出现在公开资料库。', c.id, 'http://localhost:9000/course-material/materials/demo-rejected.pdf', 'materials/demo-rejected.pdf', 'rejected-demo.pdf', 'PDF', 12000, u.id, 'REJECTED', '命中敏感词：广告', NOW(), 0, 0, 0, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)
+SELECT '违规广告资料示例', '包含广告引流内容，应该被词库审核拒绝，不会出现在公开资料库。', c.id, '/api/files/download?fileKey=materials%2Fdemo-rejected.pdf', 'materials/demo-rejected.pdf', 'rejected-demo.pdf', 'PDF', 12000, u.id, 'REJECTED', '命中敏感词：广告', NOW(), 0, 0, 0, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)
 FROM course_category c, sys_user u
 WHERE c.name = '软件工程' AND u.username = 'student'
   AND NOT EXISTS (SELECT 1 FROM material m WHERE m.file_key = 'materials/demo-rejected.pdf');
