@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BusinessException.class)
+    public Result<Void> handleBusinessException(BusinessException e) {
+        log.warn("Business exception: {}", e.getMessage());
+        return Result.fail(e.getCode(), e.getMessage());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public Result<Void> handleRuntimeException(RuntimeException e) {
         log.warn("Runtime exception: {}", e.getMessage(), e);
@@ -22,13 +28,12 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .get(0)
                 .getDefaultMessage();
-
         return Result.fail(400, message);
     }
 
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("System exception", e);
-        return Result.fail("系统异常：" + e.getMessage());
+        return Result.fail("\u7cfb\u7edf\u5f02\u5e38\uff1a" + e.getMessage());
     }
 }

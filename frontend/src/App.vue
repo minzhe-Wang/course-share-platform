@@ -1,551 +1,221 @@
 <template>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-mark">CS</span>
-        <div>
-          <strong>课程资料共享平台</strong>
-          <small>资料共享 · 互助问答 · AI 审核</small>
-        </div>
-      </div>
+  <div class="toast-stack" aria-live="polite">
+    <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.type">
+      <strong>{{ toast.title }}</strong>
+      <span>{{ toast.message }}</span>
+      <button type="button" @click="dismissToast(toast.id)">x</button>
+    </div>
+  </div>
 
+  <div v-if="!currentUser" class="auth-page">
+    <section class="auth-brand">
+      <span class="eyebrow">Course Share Platform</span>
+      <h1>课程资料共享与学习互助平台</h1>
+      <p>面向课程资料沉淀、问答协作、词库审核、举报治理和规则推荐的一体化课程平台。</p>
+      <div class="auth-metrics">
+        <article><strong>资料</strong><span>上传、审核、下载、收藏</span></article>
+        <article><strong>问答</strong><span>提问、回答、二级评论</span></article>
+        <article><strong>治理</strong><span>词库审核、人工处理、内容下架</span></article>
+      </div>
+      <div class="auth-status" :class="healthStatus.toLowerCase()"><span></span>{{ healthStatusText }}</div>
+    </section>
+
+    <section class="auth-card">
+      <div class="auth-tabs">
+        <button :class="{ active: authMode === 'login' }" type="button" @click="authMode = 'login'">登录</button>
+        <button :class="{ active: authMode === 'register' }" type="button" @click="authMode = 'register'">注册</button>
+      </div>
+      <form v-if="authMode === 'login'" class="stack-form" @submit.prevent="login">
+        <div><h2>欢迎回来</h2><p>演示账号：student / reviewer / admin，密码均为 123456</p></div>
+        <input v-model="loginForm.username" required placeholder="用户名" />
+        <input v-model="loginForm.password" required type="password" placeholder="密码" />
+        <button type="submit">进入平台</button>
+      </form>
+      <form v-else class="stack-form" @submit.prevent="register">
+        <div><h2>创建学生账号</h2><p>注册后可以发布资料、提问、回答和提交举报。</p></div>
+        <input v-model="registerForm.username" required placeholder="用户名" />
+        <input v-model="registerForm.password" required type="password" placeholder="密码" />
+        <input v-model="registerForm.nickname" placeholder="昵称" />
+        <button type="submit">注册账号</button>
+      </form>
+    </section>
+  </div>
+
+  <div v-else class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">CS</span><div><strong>Course Share</strong><small>资料 · 问答 · 推荐 · 治理</small></div></div>
       <nav class="nav-list" aria-label="主导航">
-        <button
-          v-for="item in navItems"
-          :key="item.key"
-          :class="{ active: activeView === item.key }"
-          type="button"
-          @click="activeView = item.key"
-        >
-          <span>{{ item.icon }}</span>
-          {{ item.label }}
+        <button v-for="item in visibleNavItems" :key="item.key" :class="{ active: activeView === item.key }" type="button" @click="switchView(item.key)">
+          <span>{{ item.icon }}</span>{{ item.label }}
         </button>
       </nav>
-
-      <section class="session-panel">
-        <template v-if="currentUser">
-          <span class="eyebrow">当前账号</span>
-          <strong>{{ currentUser.nickname || currentUser.username }}</strong>
-          <small>{{ currentUser.role }} · {{ currentUser.token }}</small>
-          <button class="secondary" type="button" @click="logout">退出登录</button>
-        </template>
-        <template v-else>
-          <span class="eyebrow">未登录</span>
-          <p>登录后可上传资料、收藏、提问和进入个人中心。</p>
-        </template>
-      </section>
+      <section class="sidebar-user"><span class="avatar">{{ displayName.slice(0, 1).toUpperCase() }}</span><div><strong>{{ displayName }}</strong><small>{{ currentUser.role }} · {{ currentUser.username }}</small></div></section>
+      <button class="ghost-button" type="button" @click="logout">退出登录</button>
     </aside>
 
     <main class="content">
       <header class="topbar">
-        <div>
-          <span class="eyebrow">Course Share Platform</span>
-          <h1>{{ currentTitle }}</h1>
-        </div>
-        <div class="health" :class="healthStatus.toLowerCase()">
-          <span></span>
-          {{ healthStatusText }}
-        </div>
+        <div><span class="eyebrow">Course Share Platform</span><h1>{{ currentTitle }}</h1><p>{{ currentSubtitle }}</p></div>
+        <div class="topbar-actions"><div class="health" :class="healthStatus.toLowerCase()"><span></span>{{ healthStatusText }}</div><small class="auto-refresh">自动同步</small></div>
       </header>
+      <p v-if="loading" class="loading">正在处理...</p>
 
-      <p v-if="notice" class="notice">{{ notice }}</p>
-      <p v-if="error" class="error">{{ error }}</p>
-      <p v-if="loading" class="loading">正在加载...</p>
-
-      <section v-if="activeView === 'materials'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>资料检索</h2>
-            <p>只展示已审核通过、正常上架的课程资料。</p>
-          </div>
-          <button type="button" @click="loadMaterials">刷新</button>
+      <section v-if="activeView === 'home'" class="workspace dashboard">
+        <div class="section-head"><div><h2>学习资源工作台</h2><p>资料发现、内容发布、问答协作、推荐结果和治理入口都在这里。</p></div><button type="button" @click="switchView('upload')">发布资料</button></div>
+        <div class="overview-grid">
+          <article class="stat-card"><span>资料总数</span><strong>{{ materialTotal }}</strong><small>审核通过并上架</small></article>
+          <article class="stat-card"><span>问题总数</span><strong>{{ questionTotal }}</strong><small>公开课程问题</small></article>
+          <article class="stat-card"><span>我的收藏</span><strong>{{ favoriteTotal }}</strong><small>当前账号已收藏资料</small></article>
+          <article class="stat-card highlight"><span>审核模式</span><strong>词库</strong><small>稳定、可解释、无外部 token</small></article>
         </div>
-
-        <div class="toolbar">
-          <input v-model="materialQuery.keyword" placeholder="搜索标题或简介" @keyup.enter="loadMaterials" />
-          <select v-model="materialQuery.categoryId">
-            <option value="">全部分类</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-          <select v-model="materialQuery.tagId">
-            <option value="">全部标签</option>
-            <option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
-          </select>
-          <select v-model="materialQuery.sortBy">
-            <option value="latest">最新</option>
-            <option value="like">点赞</option>
-            <option value="favorite">收藏</option>
-            <option value="download">下载</option>
-          </select>
-          <button type="button" @click="loadMaterials">查询</button>
-        </div>
-
-        <div class="data-grid">
-          <article v-for="item in materials" :key="item.id" class="data-card">
-            <div>
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.description || '暂无简介' }}</p>
-            </div>
-            <div class="meta-row">
-              <span>{{ item.categoryName }}</span>
-              <span>{{ item.fileType }}</span>
-              <span>{{ formatSize(item.fileSize) }}</span>
-            </div>
-            <div class="metric-row">
-              <span>浏览 {{ item.viewCount || 0 }}</span>
-              <span>下载 {{ item.downloadCount || 0 }}</span>
-              <span>收藏 {{ item.favoriteCount || 0 }}</span>
-            </div>
-            <button class="secondary" type="button" @click="openMaterial(item.id)">查看详情</button>
-          </article>
-        </div>
-        <p v-if="!materials.length" class="empty-state">暂无资料。可以先登录学生账号并发布一份资料。</p>
-      </section>
-
-      <section v-if="activeView === 'detail'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>{{ materialDetail?.title || '资料详情' }}</h2>
-            <p>{{ materialDetail?.description }}</p>
-          </div>
-          <button class="secondary" type="button" @click="activeView = 'materials'">返回列表</button>
-        </div>
-
-        <div v-if="materialDetail" class="detail-layout">
-          <dl>
-            <div><dt>分类</dt><dd>{{ materialDetail.categoryName }}</dd></div>
-            <div><dt>上传者</dt><dd>{{ materialDetail.uploaderName }}</dd></div>
-            <div><dt>文件地址</dt><dd>{{ materialDetail.fileUrl }}</dd></div>
-            <div><dt>类型</dt><dd>{{ materialDetail.fileType }}</dd></div>
-            <div><dt>大小</dt><dd>{{ formatSize(materialDetail.fileSize) }}</dd></div>
-          </dl>
-          <div class="tag-list">
-            <span v-for="tag in materialDetail.tags || []" :key="tag.id">{{ tag.name }}</span>
-          </div>
-          <div class="action-row">
-            <button type="button" @click="downloadMaterial(materialDetail.id)">下载</button>
-            <button class="secondary" type="button" @click="likeMaterial(materialDetail.id)">点赞</button>
-            <button class="secondary" type="button" @click="favoriteMaterial(materialDetail.id)">收藏</button>
-          </div>
+        <article v-if="activeRecommendItem" class="recommend-hero">
+          <div><span class="eyebrow">{{ activeRecommendItem.label }}</span><h3>{{ activeRecommendItem.title }}</h3><p>{{ activeRecommendItem.description || '暂无简介' }}</p><div class="metric-row"><span>{{ activeRecommendItem.categoryName || '未分类' }}</span><span>推荐分 {{ activeRecommendItem.score }}</span><span>{{ activeRecommendItem.reason }}</span></div></div>
+          <div class="recommend-hero-actions"><button type="button" @click="openRecommendation(activeRecommendItem)">查看内容</button><div class="carousel-dots"><button v-for="(_, index) in carouselItems" :key="index" :class="{ active: index === activeRecommendIndex }" type="button" @click="setRecommendIndex(index)"></button></div></div>
+        </article>
+        <div class="home-grid">
+          <section><h3>最新资料</h3><article v-for="item in materials.slice(0, 4)" :key="'hm-' + item.id" class="compact-card" @click="openMaterial(item.id)"><strong>{{ item.title }}</strong><p>{{ item.description || '暂无简介' }}</p><small>{{ item.categoryName || '未分类' }} · 下载 {{ item.downloadCount || 0 }}</small></article></section>
+          <section><h3>活跃问题</h3><article v-for="item in questions.slice(0, 4)" :key="'hq-' + item.id" class="compact-card" @click="openQuestion(item.id)"><strong>{{ item.title }}</strong><p>{{ item.content || '暂无内容' }}</p><small>{{ item.categoryName || '未分类' }} · 回答 {{ item.answerCount || 0 }}</small></article></section>
         </div>
       </section>
 
-      <section v-if="activeView === 'upload'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>发布资料</h2>
-            <p>上传文件后提交资料信息，系统会调用 Mock AI 审核。</p>
-          </div>
-        </div>
-
-        <form class="form-grid" @submit.prevent="submitMaterial">
-          <label>
-            标题
-            <input v-model="materialForm.title" required placeholder="例如：数据结构期末复习资料" />
-          </label>
-          <label>
-            分类
-            <select v-model="materialForm.categoryId" required>
-              <option value="">请选择分类</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-            </select>
-          </label>
-          <label class="wide">
-            简介
-            <textarea v-model="materialForm.description" rows="4" placeholder="资料内容、适用课程和使用建议"></textarea>
-          </label>
-          <label>
-            标签
-            <select v-model="materialForm.tagIds" multiple>
-              <option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
-            </select>
-          </label>
-          <label>
-            文件
-            <input type="file" accept=".pdf,.doc,.docx,.zip" @change="uploadFile" />
-          </label>
-          <div v-if="uploadedFile" class="upload-result">
-            <strong>{{ uploadedFile.originalFilename }}</strong>
-            <span>{{ uploadedFile.fileType }} · {{ formatSize(uploadedFile.fileSize) }}</span>
-          </div>
-          <button type="submit">提交发布</button>
-        </form>
+      <section v-if="activeView === 'materials'" class="workspace">
+        <div class="section-head"><div><h2>资料库</h2><p>筛选条件会自动生效，只展示审核通过且正常上架的课程资料。</p></div></div>
+        <div class="toolbar"><input v-model="materialQuery.keyword" placeholder="搜索标题、简介或文件名" /><select v-model="materialQuery.categoryId"><option value="">全部课程分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select><select v-model="materialQuery.gradeTagId"><option value="">全部年级</option><option v-for="tag in gradeTags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><select v-model="materialQuery.tagId"><option value="">全部标签</option><option v-for="tag in topicTags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><select v-model="materialQuery.sortBy"><option value="latest">最新</option><option value="like">点赞</option><option value="favorite">收藏</option><option value="download">下载</option></select></div>
+        <div class="card-grid"><article v-for="item in materials" :key="item.id" class="resource-card"><div class="card-topline"><span>{{ item.categoryName || '未分类' }}</span><span>{{ item.fileType }}</span></div><h3>{{ item.title }}</h3><p>{{ item.description || '暂无简介' }}</p><div class="metric-row"><span>浏览 {{ item.viewCount || 0 }}</span><span>下载 {{ item.downloadCount || 0 }}</span><span>收藏 {{ item.favoriteCount || 0 }}</span></div><div class="card-footer"><small>{{ item.uploaderName || '匿名用户' }} · {{ formatSize(item.fileSize) }}</small><button class="secondary" type="button" @click="openMaterial(item.id)">详情</button></div></article></div>
+        <p v-if="!materials.length" class="empty-state">暂无资料，可以先发布一份演示资料。</p>
       </section>
 
-      <section v-if="activeView === 'questions'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>互助问答</h2>
-            <p>浏览同学提出的问题，按分类或关键词检索。</p>
-          </div>
-          <button type="button" @click="loadQuestions">刷新</button>
-        </div>
-
-        <div class="toolbar">
-          <input v-model="questionQuery.keyword" placeholder="搜索问题" @keyup.enter="loadQuestions" />
-          <select v-model="questionQuery.categoryId">
-            <option value="">全部分类</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-          <button type="button" @click="loadQuestions">查询</button>
-        </div>
-
-        <div class="data-list">
-          <article v-for="question in questions" :key="question.id" class="row-card">
-            <div>
-              <h3>{{ question.title }}</h3>
-              <p>{{ question.content }}</p>
-            </div>
-            <div class="metric-row">
-              <span>{{ question.categoryName }}</span>
-              <span>回答 {{ question.answerCount || 0 }}</span>
-              <span>点赞 {{ question.likeCount || 0 }}</span>
-            </div>
-            <button class="secondary" type="button" @click="openQuestion(question.id)">查看讨论</button>
-          </article>
-        </div>
-        <p v-if="!questions.length" class="empty-state">暂无问题。可以发布一个课程问题等待同学回答。</p>
+      <section v-if="activeView === 'recommend'" class="workspace">
+        <div class="section-head"><div><h2>智能推荐</h2><p>基于热度、收藏、下载、浏览和时间因素定时生成，不消耗外部 AI token。</p></div><small class="auto-refresh">每 30 秒静默更新</small></div>
+        <article v-if="activeRecommendItem" class="recommend-hero"><div><span class="eyebrow">{{ activeRecommendItem.label }}</span><h3>{{ activeRecommendItem.title }}</h3><p>{{ activeRecommendItem.description || '暂无简介' }}</p><div class="metric-row"><span>{{ activeRecommendItem.categoryName || '未分类' }}</span><span>推荐分 {{ activeRecommendItem.score }}</span><span>{{ activeRecommendItem.reason }}</span></div></div><div class="recommend-hero-actions"><button type="button" @click="openRecommendation(activeRecommendItem)">查看内容</button><div class="carousel-dots"><button v-for="(_, index) in carouselItems" :key="index" :class="{ active: index === activeRecommendIndex }" type="button" @click="setRecommendIndex(index)"></button></div></div></article>
+        <div class="recommend-layout"><section><h3>热门资料</h3><article v-for="item in recommendedMaterials" :key="'m-' + item.targetId" class="recommend-card"><span class="score">{{ item.score }}</span><div><strong>{{ item.title }}</strong><p>{{ item.description || '暂无简介' }}</p><small>{{ item.categoryName || '未分类' }} · {{ item.reason }}</small></div><button class="secondary" type="button" @click="openMaterial(item.targetId)">查看</button></article></section><section><h3>热门问题</h3><article v-for="item in recommendedQuestions" :key="'q-' + item.targetId" class="recommend-card"><span class="score">{{ item.score }}</span><div><strong>{{ item.title }}</strong><p>{{ item.description || '暂无内容' }}</p><small>{{ item.categoryName || '未分类' }} · {{ item.reason }}</small></div><button class="secondary" type="button" @click="openQuestion(item.targetId)">查看</button></article></section></div>
       </section>
 
-      <section v-if="activeView === 'questionDetail'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>{{ questionDetail?.title || '问题详情' }}</h2>
-            <p>{{ questionDetail?.content }}</p>
-          </div>
-          <button class="secondary" type="button" @click="activeView = 'questions'">返回问答区</button>
-        </div>
-
-        <div v-if="questionDetail" class="detail-layout">
-          <div class="metric-row">
-            <span>{{ questionDetail.categoryName }}</span>
-            <span>{{ questionDetail.userName }}</span>
-            <span>浏览 {{ questionDetail.viewCount || 0 }}</span>
-            <span>点赞 {{ questionDetail.likeCount || 0 }}</span>
-          </div>
-
-          <form class="answer-form" @submit.prevent="submitAnswer">
-            <textarea v-model="answerForm.content" rows="4" placeholder="写下你的回答" required></textarea>
-            <button type="submit">提交回答</button>
-          </form>
-
-          <div class="data-list">
-            <article v-for="answer in questionDetail.answers || []" :key="answer.id" class="row-card">
-              <div>
-                <h3>{{ answer.userName }}</h3>
-                <p>{{ answer.content }}</p>
-              </div>
-              <div class="metric-row">
-                <span>点赞 {{ answer.likeCount || 0 }}</span>
-                <span>回复 {{ answer.replyCount || 0 }}</span>
-              </div>
-              <div v-if="answer.replies?.length" class="reply-list">
-                <p v-for="reply in answer.replies" :key="reply.id">
-                  <strong>{{ reply.userName }}</strong>
-                  <span v-if="reply.replyToUserName"> 回复 {{ reply.replyToUserName }}</span>
-                  ：{{ reply.content }}
-                </p>
-              </div>
-            </article>
-          </div>
-          <p v-if="!questionDetail.answers?.length" class="empty-state">还没有回答，做第一个帮忙的人。</p>
-        </div>
+      <section v-if="activeView === 'detail'" class="workspace detail-layout upgraded-detail">
+        <button class="link-button" type="button" @click="switchView('materials')">← 返回资料库</button>
+        <template v-if="materialDetail"><div class="detail-hero"><div><span class="eyebrow">{{ materialDetail.categoryName || '未分类' }}</span><h2>{{ materialDetail.title }}</h2><p>{{ materialDetail.description || '暂无简介' }}</p><div class="tag-list"><span v-for="tag in materialDetail.tags || []" :key="tag.id">{{ tag.name }}</span></div></div><aside><strong>{{ materialDetail.fileType }}</strong><span>{{ formatSize(materialDetail.fileSize) }}</span><button type="button" @click="downloadMaterial(materialDetail.id)">下载资料</button></aside></div><div class="detail-action-panel"><button type="button" @click="downloadMaterial(materialDetail.id)">下载资料</button><button class="secondary" type="button" @click="likeMaterial(materialDetail.id)">点赞 {{ materialDetail.likeCount || 0 }}</button><button class="secondary" type="button" @click="favoriteMaterial(materialDetail.id)">收藏 {{ materialDetail.favoriteCount || 0 }}</button><button class="secondary" type="button" @click="cancelFavoriteMaterial(materialDetail.id)">取消收藏</button></div><div class="detail-grid"><section class="detail-main"><h3>资料信息</h3><dl><div><dt>上传者</dt><dd>{{ materialDetail.uploaderName }}</dd></div><div><dt>浏览</dt><dd>{{ materialDetail.viewCount || 0 }}</dd></div><div><dt>下载</dt><dd>{{ materialDetail.downloadCount || 0 }}</dd></div><div><dt>点赞</dt><dd>{{ materialDetail.likeCount || 0 }}</dd></div><div><dt>收藏</dt><dd>{{ materialDetail.favoriteCount || 0 }}</dd></div></dl></section><form class="report-box" @submit.prevent="submitReport('MATERIAL', materialDetail.id, materialReportForm)"><strong>举报资料</strong><p>举报会进入审核员工作台，成立后资料会被自动下架。</p><div><input v-model="materialReportForm.reason" required placeholder="请输入举报原因" /><button class="danger" type="submit">提交举报</button></div></form></div></template>
       </section>
 
-      <section v-if="activeView === 'ask'" class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>发布问题</h2>
-            <p>问题会经过 Mock AI 审核，通过后公开展示。</p>
-          </div>
-        </div>
-        <form class="form-grid" @submit.prevent="submitQuestion">
-          <label>
-            标题
-            <input v-model="questionForm.title" required />
-          </label>
-          <label>
-            分类
-            <select v-model="questionForm.categoryId" required>
-              <option value="">请选择分类</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-            </select>
-          </label>
-          <label class="wide">
-            内容
-            <textarea v-model="questionForm.content" rows="6" required></textarea>
-          </label>
-          <button type="submit">提交问题</button>
-        </form>
+      <section v-if="activeView === 'upload'" class="workspace">
+        <div class="section-head"><div><h2>发布资料</h2><p>年级只能选择一个；资料标签可以选择多个，提交后自动经过词库审核。</p></div></div>
+        <form class="form-grid" @submit.prevent="submitMaterial"><label>标题<input v-model="materialForm.title" required placeholder="例如：软件工程课程设计示例资料" /></label><label>课程分类<select v-model="materialForm.categoryId" required><option value="">请选择课程分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label><label class="wide">简介<textarea v-model="materialForm.description" rows="4" placeholder="说明资料内容、适用课程和使用建议"></textarea></label><fieldset class="tag-picker"><legend>年级（单选）</legend><button v-for="tag in gradeTags" :key="tag.id" type="button" :class="{ active: materialForm.gradeTagId === tag.id }" @click="selectGrade(tag.id)">{{ tag.name }}</button></fieldset><fieldset class="tag-picker wide"><legend>资料标签（可多选）</legend><button v-for="tag in topicTags" :key="tag.id" type="button" :class="{ active: materialForm.tagIds.includes(tag.id) }" @click="toggleMaterialTag(tag.id)">{{ tag.name }}</button></fieldset><label>文件<input type="file" accept=".pdf,.doc,.docx,.zip" @change="uploadFile" /></label><div v-if="uploadedFile" class="upload-result"><strong>{{ uploadedFile.originalFilename }}</strong><span>{{ uploadedFile.fileType }} · {{ formatSize(uploadedFile.fileSize) }}</span></div><button type="submit">提交发布</button></form>
       </section>
 
-      <section v-if="activeView === 'account'" class="panel account-grid">
-        <div>
-          <h2>登录</h2>
-          <form class="stack-form" @submit.prevent="login">
-            <input v-model="loginForm.username" required placeholder="用户名" />
-            <input v-model="loginForm.password" required type="password" placeholder="密码" />
-            <button type="submit">登录</button>
-          </form>
-        </div>
-        <div>
-          <h2>注册</h2>
-          <form class="stack-form" @submit.prevent="register">
-            <input v-model="registerForm.username" required placeholder="用户名" />
-            <input v-model="registerForm.password" required type="password" placeholder="密码" />
-            <input v-model="registerForm.nickname" placeholder="昵称" />
-            <button type="submit">注册</button>
-          </form>
-        </div>
+      <section v-if="activeView === 'questions'" class="workspace">
+        <div class="section-head"><div><h2>问答区</h2><p>围绕课程资料、课程设计和复习问题进行互助讨论，筛选自动生效。</p></div></div>
+        <div class="toolbar compact"><input v-model="questionQuery.keyword" placeholder="搜索问题" /><select v-model="questionQuery.categoryId"><option value="">全部分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></div>
+        <div class="data-list"><article v-for="question in questions" :key="question.id" class="row-card"><div><h3>{{ question.title }}</h3><p>{{ question.content }}</p><div class="metric-row"><span>{{ question.categoryName || '未分类' }}</span><span>回答 {{ question.answerCount || 0 }}</span><span>点赞 {{ question.likeCount || 0 }}</span></div></div><button class="secondary" type="button" @click="openQuestion(question.id)">查看讨论</button></article></div>
       </section>
+
+      <section v-if="activeView === 'questionDetail'" class="workspace detail-layout upgraded-detail">
+        <button class="link-button" type="button" @click="switchView('questions')">← 返回问答区</button>
+        <template v-if="questionDetail"><div class="question-hero"><span class="eyebrow">{{ questionDetail.categoryName || '未分类' }}</span><h2>{{ questionDetail.title }}</h2><p>{{ questionDetail.content }}</p><div class="metric-row"><span>{{ questionDetail.userName || '匿名用户' }}</span><span>浏览 {{ questionDetail.viewCount || 0 }}</span><span>点赞 {{ questionDetail.likeCount || 0 }}</span></div></div><div class="detail-grid"><section class="detail-main discussion-main"><form class="answer-form composer-card" @submit.prevent="submitAnswer"><strong>写回答</strong><textarea v-model="answerForm.content" rows="4" placeholder="写下你的回答，提交后会经过词库审核" required></textarea><button type="submit">提交回答</button></form><div class="discussion-title"><h3>回答与评论</h3><span>{{ questionDetail.answers?.length || 0 }} 条回答</span></div><article v-for="answer in questionDetail.answers || []" :key="answer.id" class="answer-card"><div class="answer-head"><strong>{{ answer.userName }}</strong><div class="reply-actions"><button class="secondary" type="button" @click="likeAnswer(answer.id)">点赞 {{ answer.likeCount || 0 }}</button><button class="danger subtle" type="button" @click="reportAnswer(answer.id)">举报</button></div></div><p>{{ answer.content }}</p><div class="reply-list"><div v-for="reply in answer.replies || []" :key="reply.id" class="reply-card"><strong>{{ reply.userName }}</strong><span v-if="reply.replyToUserName">回复 {{ reply.replyToUserName }}</span><p>{{ reply.content }}</p><div class="reply-actions"><button class="secondary" type="button" @click="prepareReply(answer, reply)">回复</button><button class="secondary" type="button" @click="likeReply(reply.id)">点赞 {{ reply.likeCount || 0 }}</button><button class="danger subtle" type="button" @click="reportReply(reply.id)">举报</button></div></div></div><form class="reply-form" @submit.prevent="submitReply(answer)"><input v-model="replyForms[answer.id]" :placeholder="replyTargets[answer.id] ? '回复 ' + replyTargets[answer.id].name : '评论这个回答'" required /><button type="submit">发送评论</button><button v-if="replyTargets[answer.id]" class="secondary" type="button" @click="clearReplyTarget(answer.id)">取消指向</button></form></article><p v-if="!questionDetail.answers?.length" class="empty-state">还没有回答，可以做第一个回答的人。</p></section><form class="report-box sticky-side" @submit.prevent="submitReport('QUESTION', questionDetail.id, questionReportForm)"><strong>举报问题</strong><p>举报会进入审核员工作台，成立后问题会被自动下架。</p><div><input v-model="questionReportForm.reason" required placeholder="请输入举报原因" /><button class="danger" type="submit">提交举报</button></div></form></div></template>
+      </section>
+
+      <section v-if="activeView === 'ask'" class="workspace"><div class="section-head"><div><h2>发布问题</h2><p>提交后经过词库审核，通过后在问答区公开展示。</p></div></div><form class="form-grid" @submit.prevent="submitQuestion"><label>标题<input v-model="questionForm.title" required placeholder="例如：软件工程课程设计怎么选题？" /></label><label>分类<select v-model="questionForm.categoryId" required><option value="">请选择分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label><label class="wide">内容<textarea v-model="questionForm.content" rows="6" required placeholder="描述你的问题、已有思路和希望获得的帮助"></textarea></label><button type="submit">提交问题</button></form></section>
+
+      <section v-if="activeView === 'favorites'" class="workspace">
+        <div class="section-head"><div><h2>我的收藏</h2><p>这里集中展示你收藏过的资料，便于答辩演示和日常复习。</p></div><small class="auto-refresh">自动同步收藏状态</small></div>
+        <div class="card-grid"><article v-for="item in favoriteMaterials" :key="'fav-' + item.id" class="resource-card"><div class="card-topline"><span>{{ item.categoryName || '未分类' }}</span><span>{{ item.fileType }}</span></div><h3>{{ item.title }}</h3><p>{{ item.description || '暂无简介' }}</p><div class="metric-row"><span>浏览 {{ item.viewCount || 0 }}</span><span>下载 {{ item.downloadCount || 0 }}</span><span>收藏 {{ item.favoriteCount || 0 }}</span></div><div class="card-footer"><small>{{ item.uploaderName || '匿名用户' }} · {{ formatSize(item.fileSize) }}</small><button class="secondary" type="button" @click="openMaterial(item.id)">查看</button><button class="danger subtle" type="button" @click="cancelFavoriteMaterial(item.id)">移出收藏</button></div></article></div>
+        <p v-if="!favoriteMaterials.length" class="empty-state">还没有收藏资料。进入资料详情点击收藏后，会出现在这里。</p>
+      </section>
+
+      <section v-if="activeView === 'reviewWorkbench'" class="workspace reviewer-workbench"><div class="section-head"><div><h2>审核员工作台</h2><p>聚焦待处理举报、内容快照和处理动作，成立后会联动下架原内容。</p></div><small class="auto-refresh">自动同步举报</small></div><div class="review-summary"><article><span>待处理</span><strong>{{ reportStats.pending }}</strong><small>需要审核员判断</small></article><article><span>已成立</span><strong>{{ reportStats.resolved }}</strong><small>违规内容已下架</small></article><article><span>已驳回</span><strong>{{ reportStats.rejected }}</strong><small>保留原内容</small></article></div><div class="toolbar compact"><select v-model="reportQuery.handleStatus"><option value="PENDING">待处理</option><option value="RESOLVED">已成立</option><option value="REJECTED">已驳回</option><option value="">全部</option></select></div><div class="review-workspace-grid"><div class="review-list"><article v-for="report in reports" :key="report.id" class="review-card" :class="{ active: selectedReport?.id === report.id }" @click="selectReport(report)"><div class="review-card-head"><span>#{{ report.id }}</span><strong>{{ targetTypeText(report.targetType) }}</strong><em :class="report.handleStatus.toLowerCase()">{{ statusText(report.handleStatus) }}</em></div><h3>{{ report.reason }}</h3><p>{{ report.targetSnapshot }}</p><div class="metric-row"><span>举报人 {{ report.reportUserName || '-' }}</span><span>对象 ID {{ report.targetId }}</span></div></article></div><aside class="review-detail-panel" v-if="selectedReport"><div class="review-card-head"><span>#{{ selectedReport.id }}</span><strong>{{ targetTypeText(selectedReport.targetType) }}</strong><em :class="selectedReport.handleStatus.toLowerCase()">{{ statusText(selectedReport.handleStatus) }}</em></div><h3>举报详情</h3><dl><div><dt>举报原因</dt><dd>{{ selectedReport.reason }}</dd></div><div><dt>原内容快照</dt><dd>{{ selectedReport.targetSnapshot }}</dd></div><div><dt>举报人</dt><dd>{{ selectedReport.reportUserName || '-' }}</dd></div><div><dt>处理结果</dt><dd>{{ selectedReport.handleStatus === 'PENDING' ? '待处理' : statusText(selectedReport.handleStatus) }}</dd></div></dl><p class="review-hint">选择“举报成立并下架”后，系统会把对应资料、问题、回答或评论状态改为下架；选择“驳回举报”则保留内容。</p><div class="action-row" v-if="selectedReport.handleStatus === 'PENDING'"><button class="danger" type="button" @click="handleReport(selectedReport.id, 'RESOLVED')">举报成立并下架</button><button class="secondary" type="button" @click="handleReport(selectedReport.id, 'REJECTED')">驳回举报</button></div></aside></div><p v-if="!reports.length" class="empty-state">当前没有符合条件的举报。</p></section>
+
+      <section v-if="activeView === 'adminPanel'" class="workspace admin-panel"><div class="section-head"><div><h2>后台管理</h2><p>管理员可以查看平台运行概览、用户状态和内容上架状态。</p></div><small class="auto-refresh">自动同步后台数据</small></div><div class="admin-kpis"><article><span>用户</span><strong>{{ adminSummary?.totalUserCount || 0 }}</strong><small>启用 {{ adminSummary?.enabledUserCount || 0 }} / 禁用 {{ adminSummary?.disabledUserCount || 0 }}</small></article><article><span>资料</span><strong>{{ adminSummary?.totalMaterialCount || 0 }}</strong><small>通过 {{ adminSummary?.approvedMaterialCount || 0 }} / 下架 {{ adminSummary?.disabledMaterialCount || 0 }}</small></article><article><span>问答</span><strong>{{ adminSummary?.totalQuestionCount || 0 }}</strong><small>回答 {{ adminSummary?.totalAnswerCount || 0 }} / 回复 {{ adminSummary?.totalReplyCount || 0 }}</small></article><article><span>举报</span><strong>{{ adminSummary?.pendingReportCount || 0 }}</strong><small>成立 {{ adminSummary?.resolvedReportCount || 0 }} / 驳回 {{ adminSummary?.rejectedReportCount || 0 }}</small></article></div><div class="admin-tabs"><button :class="{ active: adminTab === 'users' }" type="button" @click="adminTab = 'users'">用户管理</button><button :class="{ active: adminTab === 'materials' }" type="button" @click="adminTab = 'materials'">资料管理</button><button :class="{ active: adminTab === 'questions' }" type="button" @click="adminTab = 'questions'">问题管理</button></div><div v-if="adminTab === 'users'" class="admin-table"><article class="admin-row head"><span>用户</span><span>角色</span><span>状态</span><span>操作</span></article><article v-for="user in adminUsers" :key="user.id" class="admin-row"><span><strong>{{ user.nickname || user.username }}</strong><small>{{ user.username }}</small></span><span>{{ user.role }}</span><span>{{ user.status === 1 ? '启用' : '禁用' }}</span><span><button class="secondary" type="button" @click="updateUserStatus(user)">{{ user.status === 1 ? '禁用' : '启用' }}</button></span></article></div><div v-if="adminTab === 'materials'" class="admin-table"><article class="admin-row head"><span>资料</span><span>审核</span><span>状态</span><span>操作</span></article><article v-for="item in adminMaterials" :key="item.id" class="admin-row"><span><strong>{{ item.title }}</strong><small>{{ item.categoryName }} · {{ item.uploaderName }}</small></span><span>{{ auditText(item.auditStatus) }}</span><span>{{ item.status === 1 ? '上架' : '下架' }}</span><span><button class="secondary" type="button" @click="updateMaterialStatus(item)">{{ item.status === 1 ? '下架' : '上架' }}</button></span></article></div><div v-if="adminTab === 'questions'" class="admin-table"><article class="admin-row head"><span>问题</span><span>审核</span><span>状态</span><span>操作</span></article><article v-for="item in adminQuestions" :key="item.id" class="admin-row"><span><strong>{{ item.title }}</strong><small>{{ item.categoryName }} · {{ item.userName }}</small></span><span>{{ auditText(item.auditStatus) }}</span><span>{{ item.status === 1 ? '公开' : '下架' }}</span><span><button class="secondary" type="button" @click="updateQuestionStatus(item)">{{ item.status === 1 ? '下架' : '上架' }}</button></span></article></div></section>
+
+      <section v-if="activeView === 'profile'" class="workspace profile-layout"><div class="section-head"><div><h2>个人主页</h2><p>查看当前账号、内容记录和常用信息。</p></div><button class="secondary" type="button" @click="switchView('profileEdit')">编辑个人信息</button></div><div class="profile-hero"><div class="profile-identity"><span class="avatar xl">{{ displayName.slice(0, 1).toUpperCase() }}</span><div><span class="eyebrow">当前账号</span><h3>{{ displayName }}</h3><p>{{ currentUser.username }} · {{ currentUser.role }}</p></div></div><div class="profile-metrics"><article><strong>{{ myMaterials.length }}</strong><span>我的资料</span></article><article><strong>{{ myQuestions.length }}</strong><span>我的问题</span></article><article><strong>{{ favoriteTotal }}</strong><span>我的收藏</span></article></div></div><section class="profile-summary-card"><div class="summary-head"><h3>账号信息</h3><button class="link-button" type="button" @click="switchView('profileEdit')">修改</button></div><dl><div><dt>用户名</dt><dd>{{ currentUser.username }}</dd></div><div><dt>角色</dt><dd>{{ currentUser.role }}</dd></div><div><dt>邮箱</dt><dd>{{ profile?.email || '未填写' }}</dd></div><div><dt>手机</dt><dd>{{ profile?.phone || '未填写' }}</dd></div></dl></section><div class="profile-columns"><section><h3>我的资料</h3><article v-for="item in myMaterials" :key="'pm-' + item.id" class="compact-card"><strong>{{ item.title }}</strong><p>{{ item.description || item.auditRemark || '暂无简介' }}</p><small>{{ item.categoryName || '未分类' }} · {{ item.auditStatus }}</small></article><p v-if="!myMaterials.length" class="empty-state">还没有发布资料。</p></section><section><h3>我的问题</h3><article v-for="item in myQuestions" :key="'pq-' + item.id" class="compact-card"><strong>{{ item.title }}</strong><p>{{ item.content || item.auditRemark || '暂无内容' }}</p><small>{{ item.categoryName || '未分类' }} · {{ item.auditStatus }}</small></article><p v-if="!myQuestions.length" class="empty-state">还没有发布问题。</p></section></div></section>
+
+      <section v-if="activeView === 'profileEdit'" class="workspace profile-edit-page"><button class="link-button" type="button" @click="switchView('profile')">← 返回个人主页</button><div class="section-head"><div><h2>编辑个人信息</h2><p>修改昵称、邮箱、手机号和头像地址。保存后会同步到个人主页。</p></div></div><div class="profile-panel-grid"><form class="profile-edit-card" @submit.prevent="submitProfile"><label>昵称<input v-model="profileForm.nickname" maxlength="30" placeholder="请输入昵称" /></label><label>邮箱<input v-model="profileForm.email" maxlength="100" type="email" placeholder="name@example.com" /></label><label>手机号<input v-model="profileForm.phone" maxlength="20" placeholder="请输入手机号" /></label><label class="wide">头像地址<input v-model="profileForm.avatar" maxlength="255" placeholder="可选：头像图片 URL" /></label><div class="action-row"><button type="submit">保存修改</button><button class="secondary" type="button" @click="switchView('profile')">取消</button></div></form><section class="profile-summary-card"><h3>预览</h3><div class="profile-identity mini"><span class="avatar">{{ (profileForm.nickname || displayName).slice(0, 1).toUpperCase() }}</span><div><strong>{{ profileForm.nickname || displayName }}</strong><p>{{ currentUser.username }} · {{ currentUser.role }}</p></div></div><dl><div><dt>邮箱</dt><dd>{{ profileForm.email || '未填写' }}</dd></div><div><dt>手机</dt><dd>{{ profileForm.phone || '未填写' }}</dd></div></dl></section></div></section>
     </main>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { apiRequest, clearSession, getStoredUser, storeSession } from './api'
 
 const navItems = [
-  { key: 'materials', label: '资料库', icon: '▦' },
-  { key: 'upload', label: '发布资料', icon: '↑' },
-  { key: 'questions', label: '问答区', icon: '?' },
-  { key: 'ask', label: '发布问题', icon: '+' },
-  { key: 'account', label: '账号', icon: '◎' }
+  { key: 'home', label: '工作台', icon: '▦' }, { key: 'materials', label: '资料库', icon: '▣' }, { key: 'recommend', label: '智能推荐', icon: '◇' }, { key: 'upload', label: '发布资料', icon: '+' }, { key: 'questions', label: '问答区', icon: '?' }, { key: 'ask', label: '发布问题', icon: '→' }, { key: 'favorites', label: '我的收藏', icon: '★' }, { key: 'reviewWorkbench', label: '审核工作台', icon: '!' }, { key: 'adminPanel', label: '后台管理', icon: '◎' }, { key: 'profile', label: '个人主页', icon: '●' }
 ]
+const authMode = ref('login'), currentUser = ref(getStoredUser()), activeView = ref(currentUser.value ? 'home' : 'materials'), loading = ref(false), healthStatus = ref('CHECKING')
+const categories = ref([]), tags = ref([]), materials = ref([]), materialTotal = ref(0), materialDetail = ref(null), questions = ref([]), questionTotal = ref(0), questionDetail = ref(null), recommendedMaterials = ref([]), recommendedQuestions = ref([]), activeRecommendIndex = ref(0), uploadedFile = ref(null), profile = ref(null), myMaterials = ref([]), myQuestions = ref([]), favoriteMaterials = ref([]), favoriteTotal = ref(0), reports = ref([]), selectedReport = ref(null), adminSummary = ref(null), adminUsers = ref([]), adminMaterials = ref([]), adminQuestions = ref([]), adminTab = ref('users'), toasts = ref([])
+const replyForms = reactive({}), replyTargets = reactive({})
+let recommendTimer = null, refreshTimer = null, filterTimer = null, toastSeed = 1
+const materialQuery = reactive({ pageNum: 1, pageSize: 12, keyword: '', categoryId: '', gradeTagId: '', tagId: '', sortBy: 'latest' }), questionQuery = reactive({ pageNum: 1, pageSize: 10, keyword: '', categoryId: '' }), reportQuery = reactive({ pageNum: 1, pageSize: 20, handleStatus: 'PENDING' })
+const loginForm = reactive({ username: 'student', password: '123456' }), registerForm = reactive({ username: '', password: '', nickname: '' }), profileForm = reactive({ nickname: '', email: '', phone: '', avatar: '' }), materialForm = reactive({ title: '', description: '', categoryId: '', gradeTagId: null, tagIds: [] }), questionForm = reactive({ title: '', content: '', categoryId: '' }), answerForm = reactive({ content: '' }), materialReportForm = reactive({ reason: '' }), questionReportForm = reactive({ reason: '' })
 
-const activeView = ref('materials')
-const currentUser = ref(getStoredUser())
-const notice = ref('')
-const error = ref('')
-const healthStatus = ref('CHECKING')
-const loading = ref(false)
+const canReview = computed(() => ['REVIEWER', 'ADMIN'].includes(currentUser.value?.role)), canAdmin = computed(() => currentUser.value?.role === 'ADMIN'), visibleNavItems = computed(() => navItems.filter((item) => item.key === 'reviewWorkbench' ? canReview.value : item.key === 'adminPanel' ? canAdmin.value : true)), displayName = computed(() => profile.value?.nickname || currentUser.value?.nickname || currentUser.value?.username || '用户')
+const currentTitle = computed(() => ({ detail: '资料详情', questionDetail: '问题详情', profileEdit: '编辑个人信息' }[activeView.value] || navItems.find((item) => item.key === activeView.value)?.label || '工作台')), currentSubtitle = computed(() => ({ home: '课程资料、问答协作、推荐内容和治理入口', materials: '检索、查看和下载审核通过的课程资料', recommend: '展示规则推荐生成的热门资料和热门问题', upload: '发布资料并自动进行词库审核', questions: '查看课程问题、回答和二级评论', ask: '发布课程问题并等待回答', favorites: '管理自己收藏过的课程资料', reviewWorkbench: '处理举报并联动下架违规内容', adminPanel: '管理用户、资料、问题和平台运行状态', profile: '查看个人信息和个人内容记录', profileEdit: '独立页面修改昵称、邮箱、手机号和头像', detail: '查看资料完整信息并进行互动', questionDetail: '查看问题、回答、二级评论并提交举报' }[activeView.value] || '课程资料共享与互助问答'))
+const healthStatusText = computed(() => healthStatus.value === 'UP' ? '服务正常' : healthStatus.value === 'DOWN' ? '服务异常' : '检查中'), recommendationTotal = computed(() => recommendedMaterials.value.length + recommendedQuestions.value.length), carouselItems = computed(() => [...recommendedMaterials.value.map((item) => ({ ...item, label: '热门资料' })), ...recommendedQuestions.value.map((item) => ({ ...item, label: '热门问题' }))]), activeRecommendItem = computed(() => carouselItems.value.length ? carouselItems.value[activeRecommendIndex.value % carouselItems.value.length] : null), reportStats = computed(() => ({ pending: reports.value.filter((item) => item.handleStatus === 'PENDING').length, resolved: reports.value.filter((item) => item.handleStatus === 'RESOLVED').length, rejected: reports.value.filter((item) => item.handleStatus === 'REJECTED').length }))
+const gradeTags = computed(() => tags.value.filter((tag) => tag.type === 'GRADE')), topicTags = computed(() => tags.value.filter((tag) => tag.type !== 'GRADE'))
 
-const categories = ref([])
-const tags = ref([])
-const materials = ref([])
-const materialDetail = ref(null)
-const questions = ref([])
-const questionDetail = ref(null)
-const uploadedFile = ref(null)
+watch(activeView, () => { clearToasts(); syncActiveView(true) })
+watch(adminTab, () => { if (activeView.value === 'adminPanel') loadAdminPanel(true) })
+watch(() => ({ ...materialQuery }), () => debounceFilters(loadMaterials), { deep: true })
+watch(() => ({ ...questionQuery }), () => debounceFilters(loadQuestions), { deep: true })
+watch(() => ({ ...reportQuery }), () => debounceFilters(loadReports), { deep: true })
 
-const materialQuery = reactive({ pageNum: 1, pageSize: 12, keyword: '', categoryId: '', tagId: '', sortBy: 'latest' })
-const questionQuery = reactive({ pageNum: 1, pageSize: 10, keyword: '', categoryId: '' })
-const loginForm = reactive({ username: 'student', password: '123456' })
-const registerForm = reactive({ username: '', password: '', nickname: '' })
-const materialForm = reactive({ title: '', description: '', categoryId: '', tagIds: [] })
-const questionForm = reactive({ title: '', content: '', categoryId: '' })
-const answerForm = reactive({ content: '' })
+onMounted(async () => { await Promise.allSettled([loadHealth(true), loadBaseData(true), loadMaterials(true), loadQuestions(true), loadRecommendations(true)]); if (currentUser.value) await Promise.allSettled([loadProfile(true), loadFavorites(true), canReview.value ? loadReports(true) : Promise.resolve(), canAdmin.value ? loadAdminPanel(true) : Promise.resolve()]); startRecommendCarousel(); startAutoRefresh() })
+onUnmounted(() => { stopRecommendCarousel(); stopAutoRefresh() })
 
-const currentTitle = computed(() => {
-  if (activeView.value === 'detail') return '资料详情'
-  if (activeView.value === 'questionDetail') return '问题详情'
-  return navItems.find(item => item.key === activeView.value)?.label || '课程平台'
-})
-const healthStatusText = computed(() => healthStatus.value === 'UP' ? '服务正常' : healthStatus.value === 'DOWN' ? '服务异常' : '检查中')
+function switchView(key) { activeView.value = key }
+function syncActiveView(silent = true) { if (activeView.value === 'home') Promise.allSettled([loadHealth(silent), loadMaterials(silent), loadQuestions(silent), loadRecommendations(silent), loadFavorites(silent)]); if (activeView.value === 'materials') loadMaterials(silent); if (activeView.value === 'recommend') loadRecommendations(silent); if (activeView.value === 'questions') loadQuestions(silent); if (activeView.value === 'favorites') loadFavorites(silent); if (activeView.value === 'profile' || activeView.value === 'profileEdit') loadProfile(silent); if (activeView.value === 'reviewWorkbench') loadReports(silent); if (activeView.value === 'adminPanel') loadAdminPanel(silent); if (activeView.value === 'questionDetail' && questionDetail.value?.id) loadQuestionDetail(questionDetail.value.id, silent); if (activeView.value === 'detail' && materialDetail.value?.id) loadMaterialDetail(materialDetail.value.id, silent) }
+function startAutoRefresh() { stopAutoRefresh(); refreshTimer = window.setInterval(() => syncActiveView(true), 30000) }
+function stopAutoRefresh() { if (refreshTimer) { window.clearInterval(refreshTimer); refreshTimer = null } }
+function debounceFilters(action) { window.clearTimeout(filterTimer); filterTimer = window.setTimeout(() => action(true), 450) }
+async function run(action, successMessage = '', silent = false) { if (!silent) loading.value = true; try { const result = await action(); if (successMessage && !silent) showToast('success', '操作成功', successMessage); return result } catch (err) { if (!silent) showToast('error', '操作失败', err.message || '请稍后重试'); return null } finally { if (!silent) loading.value = false } }
+function showToast(type, title, message) { const id = toastSeed++; toasts.value.push({ id, type, title, message }); window.setTimeout(() => dismissToast(id), type === 'error' ? 5200 : 2800) } function dismissToast(id) { toasts.value = toasts.value.filter((item) => item.id !== id) } function clearToasts() { toasts.value = [] }
 
-onMounted(async () => {
-  await Promise.allSettled([loadHealth(), loadBaseData(), loadMaterials(), loadQuestions()])
-})
+async function loadHealth(silent = false) { const data = await run(() => apiRequest('/api/health'), '', silent); healthStatus.value = data?.status || 'DOWN' }
+async function loadBaseData(silent = false) { await run(async () => { const [categoryData, tagData] = await Promise.all([apiRequest('/api/categories'), apiRequest('/api/tags')]); categories.value = categoryData || []; tags.value = tagData || [] }, '', silent) }
+async function loadMaterials(silent = false) { await run(async () => { const query = { ...materialQuery, tagId: materialQuery.tagId || materialQuery.gradeTagId }; delete query.gradeTagId; const data = await apiRequest('/api/materials?' + new URLSearchParams(cleanQuery(query))); materials.value = data?.list || []; materialTotal.value = data?.total || 0 }, '', silent) }
+async function loadQuestions(silent = false) { await run(async () => { const data = await apiRequest('/api/questions?' + new URLSearchParams(cleanQuery(questionQuery))); questions.value = data?.list || []; questionTotal.value = data?.total || 0 }, '', silent) }
+async function loadRecommendations(silent = false) { await run(async () => { const [m, q] = await Promise.all([apiRequest('/api/recommend/materials?limit=6'), apiRequest('/api/recommend/questions?limit=6')]); recommendedMaterials.value = m || []; recommendedQuestions.value = q || []; if (activeRecommendIndex.value >= carouselItems.value.length) activeRecommendIndex.value = 0 }, '', silent) }
+async function loadReports(silent = false) { if (!canReview.value) return; await run(async () => { const data = await apiRequest('/api/admin/reports?' + new URLSearchParams(cleanQuery(reportQuery))); reports.value = data?.list || []; selectedReport.value = reports.value.find((item) => item.id === selectedReport.value?.id) || reports.value[0] || null }, '', silent) }
+async function loadAdminPanel(silent = false) { if (!canAdmin.value) return; await run(async () => { const [summary, users, mats, qs] = await Promise.all([apiRequest('/api/admin/dashboard/summary'), apiRequest('/api/admin/users?pageNum=1&pageSize=8'), apiRequest('/api/admin/materials?pageNum=1&pageSize=8'), apiRequest('/api/admin/questions?pageNum=1&pageSize=8')]); adminSummary.value = summary; adminUsers.value = users?.list || []; adminMaterials.value = mats?.list || []; adminQuestions.value = qs?.list || [] }, '', silent) }
+async function loadProfile(silent = false) { if (!currentUser.value) return; await run(async () => { const [me, materialPage, questionPage] = await Promise.all([apiRequest('/api/user/me'), apiRequest('/api/user/materials?pageNum=1&pageSize=5'), apiRequest('/api/user/questions?pageNum=1&pageSize=5')]); profile.value = me; profileForm.nickname = me?.nickname || ''; profileForm.email = me?.email || ''; profileForm.phone = me?.phone || ''; profileForm.avatar = me?.avatar || ''; myMaterials.value = materialPage?.list || []; myQuestions.value = questionPage?.list || [] }, '', silent) }
+async function loadFavorites(silent = false) { if (!currentUser.value) return; await run(async () => { const data = await apiRequest('/api/user/favorites?pageNum=1&pageSize=12'); favoriteMaterials.value = data?.list || []; favoriteTotal.value = data?.total || 0 }, '', silent) }
+async function loadMaterialDetail(id, silent = false) { await run(async () => { materialDetail.value = await apiRequest('/api/materials/' + id) }, '', silent) }
+async function loadQuestionDetail(id, silent = false) { await run(async () => { questionDetail.value = await apiRequest('/api/questions/' + id) }, '', silent) }
+async function openMaterial(id) { await run(async () => { await loadMaterialDetail(id, true); activeView.value = 'detail'; await loadRecommendations(true) }) }
+async function openQuestion(id) { await run(async () => { await loadQuestionDetail(id, true); activeView.value = 'questionDetail'; await loadRecommendations(true) }) }
 
-async function run(action, successMessage = '') {
-  error.value = ''
-  notice.value = ''
-  loading.value = true
-  try {
-    const result = await action()
-    if (successMessage) notice.value = successMessage
-    return result
-  } catch (err) {
-    error.value = err.message || '操作失败'
-    return null
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadHealth() {
-  await run(async () => {
-    const data = await apiRequest('/api/health')
-    healthStatus.value = data.status
-  }).then(() => {
-    if (error.value) healthStatus.value = 'DOWN'
-  })
-}
-
-async function loadBaseData() {
-  await run(async () => {
-    const [categoryData, tagData] = await Promise.all([
-      apiRequest('/api/categories'),
-      apiRequest('/api/tags')
-    ])
-    categories.value = categoryData || []
-    tags.value = tagData || []
-  })
-}
-
-async function loadMaterials() {
-  await run(async () => {
-    const query = new URLSearchParams(cleanQuery(materialQuery))
-    const data = await apiRequest(`/api/materials?${query}`)
-    materials.value = data?.list || []
-  })
-}
-
-async function openMaterial(id) {
-  await run(async () => {
-    materialDetail.value = await apiRequest(`/api/materials/${id}`)
-    activeView.value = 'detail'
-  })
-}
-
-async function loadQuestions() {
-  await run(async () => {
-    const query = new URLSearchParams(cleanQuery(questionQuery))
-    const data = await apiRequest(`/api/questions?${query}`)
-    questions.value = data?.list || []
-  })
-}
-
-async function openQuestion(id) {
-  await run(async () => {
-    questionDetail.value = await apiRequest(`/api/questions/${id}`)
-    activeView.value = 'questionDetail'
-  })
-}
-
-async function login() {
-  await run(async () => {
-    const data = await apiRequest('/api/user/login', {
-      method: 'POST',
-      body: loginForm
-    })
-    storeSession(data)
-    currentUser.value = data
-  }, '登录成功')
-}
-
-async function register() {
-  await run(async () => {
-    await apiRequest('/api/user/register', {
-      method: 'POST',
-      body: registerForm
-    })
-  }, '注册成功，请登录')
-}
-
-function logout() {
-  clearSession()
-  currentUser.value = null
-  notice.value = '已退出登录'
-}
-
-async function uploadFile(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  await run(async () => {
-    const formData = new FormData()
-    formData.append('file', file)
-    uploadedFile.value = await apiRequest('/api/files/upload', {
-      method: 'POST',
-      body: formData
-    })
-  }, '文件上传成功')
-}
-
-async function submitMaterial() {
-  if (!uploadedFile.value) {
-    error.value = '请先上传文件'
-    return
-  }
-  await run(async () => {
-    await apiRequest('/api/materials', {
-      method: 'POST',
-      body: {
-        ...materialForm,
-        categoryId: Number(materialForm.categoryId),
-        tagIds: materialForm.tagIds.map(Number),
-        originalFilename: uploadedFile.value.originalFilename,
-        fileKey: uploadedFile.value.fileKey,
-        fileUrl: uploadedFile.value.fileUrl,
-        fileType: uploadedFile.value.fileType,
-        fileSize: uploadedFile.value.fileSize
-      }
-    })
-    materialForm.title = ''
-    materialForm.description = ''
-    materialForm.categoryId = ''
-    materialForm.tagIds = []
-    uploadedFile.value = null
-    await loadMaterials()
-  }, '资料已提交审核')
-}
-
-async function submitQuestion() {
-  await run(async () => {
-    await apiRequest('/api/questions', {
-      method: 'POST',
-      body: {
-        ...questionForm,
-        categoryId: Number(questionForm.categoryId)
-      }
-    })
-    questionForm.title = ''
-    questionForm.content = ''
-    questionForm.categoryId = ''
-    await loadQuestions()
-  }, '问题已提交审核')
-}
-
-async function submitAnswer() {
-  if (!questionDetail.value?.id) return
-  await run(async () => {
-    await apiRequest(`/api/questions/${questionDetail.value.id}/answers`, {
-      method: 'POST',
-      body: answerForm
-    })
-    answerForm.content = ''
-    await openQuestion(questionDetail.value.id)
-  }, '回答已提交审核')
-}
-
-async function downloadMaterial(id) {
-  await run(async () => {
-    const data = await apiRequest(`/api/materials/${id}/download`, { method: 'POST' })
-    if (data?.downloadUrl) window.open(data.downloadUrl, '_blank')
-  }, '下载记录已生成')
-}
-
-async function likeMaterial(id) {
-  await run(async () => {
-    await apiRequest(`/api/materials/${id}/like`, { method: 'POST' })
-    await openMaterial(id)
-  }, '点赞成功')
-}
-
-async function favoriteMaterial(id) {
-  await run(async () => {
-    await apiRequest(`/api/materials/${id}/favorite`, { method: 'POST' })
-    await openMaterial(id)
-  }, '收藏成功')
-}
-
-function cleanQuery(query) {
-  return Object.fromEntries(Object.entries(query).filter(([, value]) => value !== '' && value !== null && value !== undefined))
-}
-
-function formatSize(size) {
-  if (!size && size !== 0) return '-'
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / 1024 / 1024).toFixed(1)} MB`
-}
+async function login() { await run(async () => { const data = await apiRequest('/api/user/login', { method: 'POST', body: loginForm }); storeSession(data); currentUser.value = data; activeView.value = 'home'; await Promise.allSettled([loadProfile(true), loadFavorites(true), loadMaterials(true), loadQuestions(true), loadRecommendations(true), canReview.value ? loadReports(true) : Promise.resolve(), canAdmin.value ? loadAdminPanel(true) : Promise.resolve()]) }, '登录成功') }
+async function register() { await run(async () => { await apiRequest('/api/user/register', { method: 'POST', body: registerForm }); authMode.value = 'login' }, '注册成功，请登录') }
+async function submitProfile() { await run(async () => { const updated = await apiRequest('/api/user/profile', { method: 'PUT', body: profileForm }); profile.value = updated; currentUser.value = { ...currentUser.value, ...updated, userId: updated.userId || currentUser.value.userId, token: currentUser.value.token }; storeSession(currentUser.value); await loadProfile(true); activeView.value = 'profile' }, '个人信息已保存') }
+function logout() { clearSession(); currentUser.value = null; profile.value = null; myMaterials.value = []; myQuestions.value = []; favoriteMaterials.value = []; reports.value = []; adminSummary.value = null; showToast('success', '已退出', '已退出登录') }
+async function uploadFile(event) { const file = event.target.files?.[0]; if (!file) return; await run(async () => { const formData = new FormData(); formData.append('file', file); uploadedFile.value = await apiRequest('/api/files/upload', { method: 'POST', body: formData }) }, '文件上传成功') }
+function selectGrade(tagId) { materialForm.gradeTagId = materialForm.gradeTagId === tagId ? null : tagId }
+function toggleMaterialTag(tagId) { const index = materialForm.tagIds.indexOf(tagId); if (index >= 0) materialForm.tagIds.splice(index, 1); else materialForm.tagIds.push(tagId) }
+function materialSelectedTagIds() { return [...new Set([materialForm.gradeTagId, ...materialForm.tagIds].filter(Boolean).map(Number))] }
+async function submitMaterial() { if (!uploadedFile.value) { showToast('error', '缺少文件', '请先上传文件'); return } await run(async () => { await apiRequest('/api/materials', { method: 'POST', body: { title: materialForm.title, description: materialForm.description, categoryId: Number(materialForm.categoryId), tagIds: materialSelectedTagIds(), originalFilename: uploadedFile.value.originalFilename, fileKey: uploadedFile.value.fileKey, fileUrl: uploadedFile.value.fileUrl, fileType: uploadedFile.value.fileType, fileSize: uploadedFile.value.fileSize } }); materialForm.title = ''; materialForm.description = ''; materialForm.categoryId = ''; materialForm.gradeTagId = null; materialForm.tagIds = []; uploadedFile.value = null; await Promise.all([loadMaterials(true), loadRecommendations(true), loadProfile(true)]); activeView.value = 'materials' }, '资料已提交词库审核') }
+async function submitQuestion() { await run(async () => { await apiRequest('/api/questions', { method: 'POST', body: { ...questionForm, categoryId: Number(questionForm.categoryId) } }); questionForm.title = ''; questionForm.content = ''; questionForm.categoryId = ''; await Promise.all([loadQuestions(true), loadRecommendations(true), loadProfile(true)]); activeView.value = 'questions' }, '问题已提交词库审核') }
+async function submitAnswer() { if (!questionDetail.value?.id) return; const id = questionDetail.value.id; await run(async () => { await apiRequest('/api/questions/' + id + '/answers', { method: 'POST', body: answerForm }); answerForm.content = ''; await loadQuestionDetail(id, true) }, '回答已提交词库审核') }
+async function submitReply(answer) { const content = (replyForms[answer.id] || '').trim(); if (!content) return; await run(async () => { await apiRequest('/api/answers/' + answer.id + '/replies', { method: 'POST', body: { content, replyToUserId: replyTargets[answer.id]?.userId || null } }); replyForms[answer.id] = ''; clearReplyTarget(answer.id); await loadQuestionDetail(questionDetail.value.id, true) }, '评论已提交词库审核') }
+function prepareReply(answer, reply) { replyTargets[answer.id] = { userId: reply.userId || null, name: reply.userName || '该同学' } }
+function clearReplyTarget(answerId) { delete replyTargets[answerId] }
+function selectReport(report) { selectedReport.value = report }
+async function submitReport(targetType, targetId, form) { await run(async () => { await apiRequest('/api/reports', { method: 'POST', body: { targetType, targetId, reason: form.reason } }); form.reason = ''; await loadReports(true) }, '举报已提交，等待审核员处理') }
+function reportAnswer(id) { submitReport('ANSWER', id, { reason: '回答内容需要审核' }) }
+function reportReply(id) { submitReport('REPLY', id, { reason: '评论内容需要审核' }) }
+async function handleReport(id, handleStatus) { const handleResult = handleStatus === 'RESOLVED' ? '举报成立，内容已下架。' : '举报不成立，已驳回。'; await run(async () => { await apiRequest('/api/admin/reports/' + id + '/handle', { method: 'PUT', body: { handleStatus, handleResult } }); await loadReports(true); await Promise.allSettled([loadMaterials(true), loadQuestions(true), loadRecommendations(true), loadAdminPanel(true)]) }, handleResult) }
+async function downloadMaterial(id) { await run(async () => { const data = await apiRequest('/api/materials/' + id + '/download', { method: 'POST' }); if (data?.downloadUrl) window.open(data.downloadUrl, '_blank') }, '已生成临时下载链接') }
+async function likeMaterial(id) { await run(async () => { await apiRequest('/api/materials/' + id + '/like', { method: 'POST' }); await loadMaterialDetail(id, true) }, '点赞成功') }
+async function favoriteMaterial(id) { await run(async () => { await apiRequest('/api/materials/' + id + '/favorite', { method: 'POST' }); await Promise.all([loadMaterialDetail(id, true), loadFavorites(true), loadRecommendations(true)]) }, '已加入我的收藏') }
+async function cancelFavoriteMaterial(id) { await run(async () => { await apiRequest('/api/materials/' + id + '/favorite', { method: 'DELETE' }); await Promise.allSettled([materialDetail.value?.id === id ? loadMaterialDetail(id, true) : Promise.resolve(), loadFavorites(true), loadRecommendations(true)]) }, '已移出我的收藏') }
+async function likeAnswer(id) { await run(async () => { await apiRequest('/api/answers/' + id + '/like', { method: 'POST' }); await loadQuestionDetail(questionDetail.value.id, true) }, '点赞回答成功') }
+async function likeReply(id) { await run(async () => { await apiRequest('/api/replies/' + id + '/like', { method: 'POST' }); await loadQuestionDetail(questionDetail.value.id, true) }, '点赞评论成功') }
+async function updateUserStatus(user) { await run(async () => { await apiRequest('/api/admin/users/' + user.id + '/status', { method: 'PUT', body: { status: user.status === 1 ? 0 : 1 } }); await loadAdminPanel(true) }, user.status === 1 ? '用户已禁用' : '用户已启用') }
+async function updateMaterialStatus(item) { await run(async () => { await apiRequest('/api/admin/materials/' + item.id + '/status', { method: 'PUT', body: { status: item.status === 1 ? 0 : 1 } }); await Promise.all([loadAdminPanel(true), loadMaterials(true), loadRecommendations(true)]) }, item.status === 1 ? '资料已下架' : '资料已上架') }
+async function updateQuestionStatus(item) { await run(async () => { await apiRequest('/api/admin/questions/' + item.id + '/status', { method: 'PUT', body: { status: item.status === 1 ? 0 : 1 } }); await Promise.all([loadAdminPanel(true), loadQuestions(true), loadRecommendations(true)]) }, item.status === 1 ? '问题已下架' : '问题已上架') }
+function openRecommendation(item) { if (item.targetType === 'MATERIAL') openMaterial(item.targetId); if (item.targetType === 'QUESTION') openQuestion(item.targetId) }
+function startRecommendCarousel() { stopRecommendCarousel(); recommendTimer = window.setInterval(() => { if (carouselItems.value.length > 1) activeRecommendIndex.value = (activeRecommendIndex.value + 1) % carouselItems.value.length }, 4200) }
+function stopRecommendCarousel() { if (recommendTimer) { window.clearInterval(recommendTimer); recommendTimer = null } }
+function setRecommendIndex(index) { activeRecommendIndex.value = index; startRecommendCarousel() }
+function cleanQuery(query) { return Object.fromEntries(Object.entries(query).filter(([, value]) => value !== '' && value !== null && value !== undefined)) }
+function formatSize(size) { if (!size && size !== 0) return '-'; if (size < 1024) return size + ' B'; if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'; return (size / 1024 / 1024).toFixed(1) + ' MB' }
+function statusText(status) { return { PENDING: '待处理', RESOLVED: '举报成立', REJECTED: '已驳回' }[status] || status }
+function targetTypeText(type) { return { MATERIAL: '资料', QUESTION: '问题', ANSWER: '回答', REPLY: '评论' }[type] || type }
+function auditText(status) { return { APPROVED: '通过', PENDING: '待审', REJECTED: '拒绝' }[status] || status }
 </script>

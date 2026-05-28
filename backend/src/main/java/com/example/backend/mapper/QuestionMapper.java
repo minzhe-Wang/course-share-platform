@@ -10,6 +10,7 @@ import com.example.backend.vo.QuestionAnswerVO;
 import com.example.backend.vo.QuestionDetailVO;
 import com.example.backend.vo.QuestionListItemVO;
 import com.example.backend.vo.QuestionReplyVO;
+import com.example.backend.vo.RecommendationItemVO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -215,6 +216,7 @@ public interface QuestionMapper {
     @Select("""
             SELECT
                 r.id,
+                r.user_id,
                 r.content,
                 u.nickname AS user_name,
                 ru.nickname AS reply_to_user_name,
@@ -502,4 +504,38 @@ public interface QuestionMapper {
             LIMIT #{limit}
             """)
     List<QuestionListItemVO> findHotQuestions(Integer limit);
+
+    @Select("""
+            SELECT
+                'QUESTION' AS target_type,
+                q.id AS target_id,
+                q.title,
+                q.content AS description,
+                c.name AS category_name,
+                (
+                    q.answer_count * 3
+                    + q.like_count * 2
+                    + q.view_count
+                    + CASE
+                        WHEN q.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 12
+                        WHEN q.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 6
+                        ELSE 0
+                      END
+                ) AS score,
+                CASE
+                    WHEN q.answer_count >= 3 THEN '讨论活跃'
+                    WHEN q.like_count >= 3 THEN '近期热度较高'
+                    WHEN q.view_count >= 5 THEN '近期热度较高'
+                    ELSE '适合优先查看'
+                END AS reason,
+                q.create_time
+            FROM question q
+            INNER JOIN course_category c ON c.id = q.category_id
+            WHERE q.audit_status = 'APPROVED'
+              AND q.status = 1
+            ORDER BY score DESC, q.create_time DESC, q.id DESC
+            LIMIT #{limit}
+            """)
+    List<RecommendationItemVO> findRecommendedQuestions(Integer limit);
 }
+

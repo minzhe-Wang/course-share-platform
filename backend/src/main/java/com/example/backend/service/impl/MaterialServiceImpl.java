@@ -6,6 +6,7 @@ import com.example.backend.entity.CourseCategory;
 import com.example.backend.entity.Material;
 import com.example.backend.entity.SysUser;
 import com.example.backend.entity.Tag;
+import com.example.backend.exception.BusinessException;
 import com.example.backend.mapper.AiAuditRecordMapper;
 import com.example.backend.mapper.CourseCategoryMapper;
 import com.example.backend.mapper.MaterialMapper;
@@ -13,6 +14,7 @@ import com.example.backend.mapper.TagMapper;
 import com.example.backend.service.AiAuditService;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.CacheService;
+import com.example.backend.service.FileService;
 import com.example.backend.service.MaterialService;
 import com.example.backend.vo.AiAuditResultVO;
 import com.example.backend.vo.MaterialCreateVO;
@@ -45,11 +47,12 @@ public class MaterialServiceImpl implements MaterialService {
     private final AiAuditRecordMapper aiAuditRecordMapper;
     private final AuthService authService;
     private final CacheService cacheService;
+    private final FileService fileService;
 
     @Override
     @Transactional
     public MaterialCreateVO createMaterial(MaterialCreateDTO materialCreateDTO, String authorization) {
-        SysUser user = authService.getEnabledStudent(authorization, "只有学生可以操作资料");
+        SysUser user = authService.getEnabledStudent(authorization, "\u53ea\u6709\u5b66\u751f\u53ef\u4ee5\u64cd\u4f5c\u8d44\u6599");
         CourseCategory category = getEnabledCategory(materialCreateDTO.getCategoryId());
         List<Long> tagIds = normalizeTagIds(materialCreateDTO.getTagIds());
         checkTags(tagIds);
@@ -84,7 +87,7 @@ public class MaterialServiceImpl implements MaterialService {
                 .auditResult(auditResult.getAuditResult())
                 .riskScore(auditResult.getRiskScore())
                 .reason(auditResult.getReason())
-                .modelName("mock-ai-audit")
+                .modelName("lexicon-audit")
                 .requestContent(auditContent)
                 .responseContent(auditResult.getReason())
                 .build());
@@ -138,7 +141,7 @@ public class MaterialServiceImpl implements MaterialService {
     @Override
     @Transactional
     public MaterialDownloadVO downloadMaterial(Long id, String authorization) {
-        SysUser user = authService.getEnabledStudent(authorization, "只有学生可以操作资料");
+        SysUser user = authService.getEnabledStudent(authorization, "\u53ea\u6709\u5b66\u751f\u53ef\u4ee5\u64cd\u4f5c\u8d44\u6599");
         MaterialDetailVO detail = getApprovedMaterialDetail(id);
 
         materialMapper.insertDownloadRecord(user.getId(), id, null);
@@ -146,18 +149,18 @@ public class MaterialServiceImpl implements MaterialService {
         cacheService.evictHotMaterials();
 
         return MaterialDownloadVO.builder()
-                .downloadUrl(detail.getFileUrl())
+                .downloadUrl(fileService.getDownloadUrl(detail.getFileKey()))
                 .build();
     }
 
     @Override
     @Transactional
     public void likeMaterial(Long id, String authorization) {
-        SysUser user = authService.getEnabledStudent(authorization, "只有学生可以操作资料");
+        SysUser user = authService.getEnabledStudent(authorization, "\u53ea\u6709\u5b66\u751f\u53ef\u4ee5\u64cd\u4f5c\u8d44\u6599");
         getApprovedMaterialDetail(id);
 
         if (materialMapper.countMaterialLike(user.getId(), id) > 0) {
-            throw new RuntimeException("已经点赞");
+            throw new BusinessException(400, "\u5df2\u7ecf\u70b9\u8d5e");
         }
 
         materialMapper.insertMaterialLike(user.getId(), id);
@@ -168,11 +171,11 @@ public class MaterialServiceImpl implements MaterialService {
     @Override
     @Transactional
     public void favoriteMaterial(Long id, String authorization) {
-        SysUser user = authService.getEnabledStudent(authorization, "只有学生可以操作资料");
+        SysUser user = authService.getEnabledStudent(authorization, "\u53ea\u6709\u5b66\u751f\u53ef\u4ee5\u64cd\u4f5c\u8d44\u6599");
         getApprovedMaterialDetail(id);
 
         if (materialMapper.countMaterialFavorite(user.getId(), id) > 0) {
-            throw new RuntimeException("已经收藏");
+            throw new BusinessException(400, "\u5df2\u7ecf\u6536\u85cf");
         }
 
         materialMapper.insertMaterialFavorite(user.getId(), id);
@@ -183,11 +186,11 @@ public class MaterialServiceImpl implements MaterialService {
     @Override
     @Transactional
     public void cancelFavoriteMaterial(Long id, String authorization) {
-        SysUser user = authService.getEnabledStudent(authorization, "只有学生可以操作资料");
+        SysUser user = authService.getEnabledStudent(authorization, "\u53ea\u6709\u5b66\u751f\u53ef\u4ee5\u64cd\u4f5c\u8d44\u6599");
         getApprovedMaterialDetail(id);
 
         if (materialMapper.countMaterialFavorite(user.getId(), id) == 0) {
-            throw new RuntimeException("尚未收藏");
+            throw new BusinessException(400, "\u5c1a\u672a\u6536\u85cf");
         }
 
         materialMapper.deleteMaterialFavorite(user.getId(), id);
@@ -197,12 +200,12 @@ public class MaterialServiceImpl implements MaterialService {
 
     private MaterialDetailVO getApprovedMaterialDetail(Long id) {
         if (id == null) {
-            throw new RuntimeException("资料不存在");
+            throw new BusinessException(404, "\u8d44\u6599\u4e0d\u5b58\u5728");
         }
 
         MaterialDetailVO detail = materialMapper.findApprovedDetailById(id);
         if (detail == null) {
-            throw new RuntimeException("资料不存在");
+            throw new BusinessException(404, "\u8d44\u6599\u4e0d\u5b58\u5728");
         }
         return detail;
     }
@@ -210,7 +213,7 @@ public class MaterialServiceImpl implements MaterialService {
     private CourseCategory getEnabledCategory(Long categoryId) {
         CourseCategory category = courseCategoryMapper.findById(categoryId);
         if (category == null || category.getStatus() == null || category.getStatus() != NORMAL_STATUS) {
-            throw new RuntimeException("课程分类不存在");
+            throw new BusinessException(404, "\u8bfe\u7a0b\u5206\u7c7b\u4e0d\u5b58\u5728");
         }
         return category;
     }
@@ -222,11 +225,11 @@ public class MaterialServiceImpl implements MaterialService {
 
         List<Tag> tags = tagMapper.findByIds(tagIds);
         if (tags.size() != tagIds.size()) {
-            throw new RuntimeException("标签不存在");
+            throw new BusinessException(404, "\u6807\u7b7e\u4e0d\u5b58\u5728");
         }
         for (Tag tag : tags) {
             if (tag.getStatus() == null || tag.getStatus() != NORMAL_STATUS) {
-                throw new RuntimeException("标签不存在");
+                throw new BusinessException(404, "\u6807\u7b7e\u4e0d\u5b58\u5728");
             }
         }
     }
@@ -239,7 +242,7 @@ public class MaterialServiceImpl implements MaterialService {
         Set<Long> uniqueTagIds = new HashSet<>();
         for (Long tagId : tagIds) {
             if (tagId == null) {
-                throw new RuntimeException("标签不存在");
+                throw new BusinessException(404, "\u6807\u7b7e\u4e0d\u5b58\u5728");
             }
             uniqueTagIds.add(tagId);
         }
@@ -249,7 +252,7 @@ public class MaterialServiceImpl implements MaterialService {
     private String normalizeFileType(String fileType) {
         String normalizedFileType = fileType.trim().toUpperCase(Locale.ROOT);
         if (!ALLOWED_FILE_TYPES.contains(normalizedFileType)) {
-            throw new RuntimeException("文件类型不支持");
+            throw new BusinessException(400, "\u6587\u4ef6\u7c7b\u578b\u4e0d\u652f\u6301");
         }
         return normalizedFileType;
     }

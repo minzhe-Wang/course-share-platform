@@ -107,22 +107,29 @@ Invoke-Json -Method "GET" -Path "/api/materials?pageNum=1&pageSize=5" -Name "mat
 Invoke-Json -Method "GET" -Path "/api/questions?pageNum=1&pageSize=5" -Name "question list" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/hot/materials?limit=5" -Name "hot materials" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/hot/questions?limit=5" -Name "hot questions" | Out-Null
+Invoke-Json -Method "GET" -Path "/api/recommend/materials?limit=5" -Name "recommended materials" | Out-Null
+Invoke-Json -Method "GET" -Path "/api/recommend/questions?limit=5" -Name "recommended questions" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/user/materials?pageNum=1&pageSize=5" -Token $studentToken -Name "my materials" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/user/favorites?pageNum=1&pageSize=5" -Token $studentToken -Name "my favorites" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/user/questions?pageNum=1&pageSize=5" -Token $studentToken -Name "my questions" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/user/answers?pageNum=1&pageSize=5" -Token $studentToken -Name "my answers" | Out-Null
 Invoke-Json -Method "GET" -Path "/api/user/downloads?pageNum=1&pageSize=5" -Token $studentToken -Name "my downloads" | Out-Null
 
-Write-Step "AI audit mock"
+Write-Step "Lexicon audit"
 Invoke-Json -Method "POST" -Path "/api/ai-audit/test" -Body @{
     targetType = "QUESTION"
     content = "This is a normal study note."
-} -Name "ai audit pass" | Out-Null
+} -Name "lexicon audit pass" | Out-Null
 $rejectKeyword = -join ([char]24191, [char]21578)
 Invoke-Json -Method "POST" -Path "/api/ai-audit/test" -Body @{
     targetType = "QUESTION"
     content = "mock $rejectKeyword content"
-} -Name "ai audit reject" | Out-Null
+} -Name "lexicon audit reject" | Out-Null
+$insultKeyword = -join ([char]25105, [char]26085, [char]20320, [char]22920)
+Invoke-Json -Method "POST" -Path "/api/ai-audit/test" -Body @{
+    targetType = "QUESTION"
+    content = $insultKeyword
+} -Name "lexicon audit insult reject" | Out-Null
 
 Write-Step "Reviewer/admin APIs"
 Invoke-Json -Method "GET" -Path "/api/admin/reports?pageNum=1&pageSize=5" -Token $reviewerToken -Name "admin reports" | Out-Null

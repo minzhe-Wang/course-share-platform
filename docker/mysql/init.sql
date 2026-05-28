@@ -1,4 +1,4 @@
-SET NAMES utf8mb4;
+﻿SET NAMES utf8mb4;
 
 DROP DATABASE IF EXISTS course_share;
 CREATE DATABASE course_share DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -250,8 +250,8 @@ INSERT INTO course_category (name, type, sort_no) VALUES
 ('数据结构', '专业核心课', 3),
 ('数据库原理', '专业核心课', 4),
 ('软件工程', '专业核心课', 5),
-('Java程序设计', '专业课', 6),
-('Web开发技术', '专业课', 7),
+('Java 程序设计', '专业课', 6),
+('Web 开发技术', '专业课', 7),
 ('算法设计与分析', '专业核心课', 8);
 
 INSERT INTO tag (name, type) VALUES
@@ -274,4 +274,61 @@ INSERT INTO tag (name, type) VALUES
 INSERT INTO sys_user (username, password, nickname, role) VALUES
 ('admin', '$2a$10$c3Nop73ev22Jybv/J9ZhHOKgvKKJHc2.LSCJv6MmgBMFMqEXG9HNC', '系统管理员', 'ADMIN'),
 ('reviewer', '$2a$10$4kBwEdUMGFOlk13Kt9btKuUhmY6CvXniaaqEchwH54/Vzk3Nmc10.', '举报审核员', 'REVIEWER'),
-('student', '$2a$10$pFlEa5KtuaDLZ2ZApaWMbeSUOWxoU9CVzf21aPUbj7lldH9N4G5Qy', '测试学生', 'STUDENT');
+('student', '$2a$10$pFlEa5KtuaDLZ2ZApaWMbeSUOWxoU9CVzf21aPUbj7lldH9N4G5Qy', '测试学生', 'STUDENT'),
+('alice', '$2a$10$pFlEa5KtuaDLZ2ZApaWMbeSUOWxoU9CVzf21aPUbj7lldH9N4G5Qy', '资料整理员 Alice', 'STUDENT'),
+('bob', '$2a$10$pFlEa5KtuaDLZ2ZApaWMbeSUOWxoU9CVzf21aPUbj7lldH9N4G5Qy', '问答达人 Bob', 'STUDENT');
+
+INSERT INTO material (title, description, category_id, file_url, file_key, original_filename, file_type, file_size, uploader_id, audit_status, audit_remark, audit_time, view_count, download_count, like_count, favorite_count, status, create_time) VALUES
+('软件工程课程设计验收模板', '覆盖需求分析、类图、顺序图、Docker 部署和答辩讲解，可直接作为课程设计验收参考。', 5, 'http://localhost:9000/course-material/materials/demo-software-engineering.pdf', 'materials/demo-software-engineering.pdf', 'software-engineering-demo.pdf', 'PDF', 42896, 4, 'APPROVED', '词库审核通过', NOW(), 86, 18, 24, 16, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('数据库原理期末复习提纲', '整理 ER 图、范式、事务隔离级别、索引和 SQL 优化常见题型。', 4, 'http://localhost:9000/course-material/materials/demo-database-review.pdf', 'materials/demo-database-review.pdf', 'database-review.pdf', 'PDF', 38920, 3, 'APPROVED', '词库审核通过', NOW(), 64, 14, 17, 11, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('计算机网络实验指导合集', '包含 Socket 编程、HTTP 抓包、DNS 查询和 TCP 三次握手实验记录模板。', 2, 'http://localhost:9000/course-material/materials/demo-network-lab.docx', 'materials/demo-network-lab.docx', 'network-lab-guide.docx', 'DOCX', 51200, 4, 'APPROVED', '词库审核通过', NOW(), 51, 9, 12, 8, 1, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+('数据结构常见算法笔记', '覆盖链表、栈、队列、树、图、排序和动态规划的课堂笔记。', 3, 'http://localhost:9000/course-material/materials/demo-data-structure.pdf', 'materials/demo-data-structure.pdf', 'data-structure-notes.pdf', 'PDF', 35600, 5, 'APPROVED', '词库审核通过', NOW(), 73, 21, 19, 13, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)),
+('Java Web 项目脚手架示例', '一个适合课程实训的 Spring Boot + Vue 前后端分离项目结构示例。', 7, 'http://localhost:9000/course-material/materials/demo-java-web.zip', 'materials/demo-java-web.zip', 'java-web-starter.zip', 'ZIP', 102400, 5, 'APPROVED', '词库审核通过', NOW(), 58, 16, 13, 10, 1, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+('违规广告资料示例', '包含广告引流内容，应该被词库审核拒绝，不会出现在公开资料库。', 5, 'http://localhost:9000/course-material/materials/demo-rejected.pdf', 'materials/demo-rejected.pdf', 'rejected-demo.pdf', 'PDF', 12000, 3, 'REJECTED', '命中敏感词：广告', NOW(), 0, 0, 0, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+INSERT INTO material_tag (material_id, tag_id) VALUES
+(1, 3), (1, 11), (1, 14),
+(2, 3), (2, 9), (2, 12),
+(3, 2), (3, 8), (3, 15),
+(4, 2), (4, 7), (4, 13),
+(5, 3), (5, 11), (5, 14);
+
+INSERT INTO question (title, content, category_id, user_id, audit_status, audit_remark, audit_time, view_count, answer_count, like_count, status, create_time) VALUES
+('软件工程答辩时怎么讲设计模式？', '项目里用了分层架构、Service 接口和统一异常，答辩时应该怎么讲才清楚？', 5, 3, 'APPROVED', '词库审核通过', NOW(), 45, 2, 9, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('数据库索引为什么会失效？', 'LIKE、函数、隐式类型转换这些场景如何解释？有没有适合课堂展示的例子？', 4, 4, 'APPROVED', '词库审核通过', NOW(), 38, 2, 7, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('Docker Compose 启动很慢怎么排查？', '同学电脑拉镜像失败或者后端一直 unhealthy，应该按什么顺序排查？', 7, 5, 'APPROVED', '词库审核通过', NOW(), 52, 3, 11, 1, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+('操作系统进程和线程区别怎么记？', '希望有一版适合期末复习的对比说明。', 1, 3, 'APPROVED', '词库审核通过', NOW(), 29, 1, 5, 1, DATE_SUB(NOW(), INTERVAL 4 DAY));
+
+INSERT INTO answer (question_id, content, user_id, audit_status, audit_remark, audit_time, like_count, reply_count, status, create_time) VALUES
+(1, '可以按“为什么分层、每层负责什么、后续如何扩展”三个角度讲，比单纯背概念更像真实工程。', 4, 'APPROVED', '词库审核通过', NOW(), 8, 2, 1, DATE_SUB(NOW(), INTERVAL 22 HOUR)),
+(1, '设计模式不要硬套，重点讲 Controller-Service-Mapper 的职责边界和统一异常处理。', 5, 'APPROVED', '词库审核通过', NOW(), 6, 1, 1, DATE_SUB(NOW(), INTERVAL 20 HOUR)),
+(2, '索引失效可以准备三条 SQL：左模糊、对字段使用函数、字符串数字隐式转换，执行计划对比最直观。', 5, 'APPROVED', '词库审核通过', NOW(), 7, 1, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(3, '先看 docker compose ps，再看 logs，最后确认端口、环境变量、数据库初始化和镜像源网络。', 3, 'APPROVED', '词库审核通过', NOW(), 10, 2, 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO answer_reply (answer_id, user_id, reply_to_user_id, content, audit_status, audit_remark, audit_time, like_count, status, create_time) VALUES
+(1, 3, NULL, '这个思路适合答辩，我会把它整理成三页 PPT。', 'APPROVED', '词库审核通过', NOW(), 4, 1, DATE_SUB(NOW(), INTERVAL 18 HOUR)),
+(1, 5, 3, '可以再补一个“后续换 JWT”作为扩展点，会更像工程项目。', 'APPROVED', '词库审核通过', NOW(), 5, 1, DATE_SUB(NOW(), INTERVAL 16 HOUR)),
+(2, 4, NULL, '确实，讲清楚边界比强行套模式更重要。', 'APPROVED', '词库审核通过', NOW(), 3, 1, DATE_SUB(NOW(), INTERVAL 15 HOUR)),
+(3, 4, NULL, '执行计划截图很有说服力，答辩现场可以直接演示。', 'APPROVED', '词库审核通过', NOW(), 3, 1, DATE_SUB(NOW(), INTERVAL 12 HOUR)),
+(4, 4, NULL, '网络问题可以先切换镜像源，很多同学卡在拉取基础镜像。', 'APPROVED', '词库审核通过', NOW(), 4, 1, DATE_SUB(NOW(), INTERVAL 10 HOUR)),
+(4, 5, 4, '还要提醒他们看 backend 的健康检查日志。', 'APPROVED', '词库审核通过', NOW(), 2, 1, DATE_SUB(NOW(), INTERVAL 8 HOUR));
+
+INSERT INTO report (target_type, target_id, target_snapshot, report_user_id, reason, handle_status, create_time) VALUES
+('MATERIAL', 6, '违规广告资料示例', 3, '资料简介里出现广告引流，建议下架。', 'PENDING', DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+('QUESTION', 3, 'Docker Compose 启动很慢怎么排查？', 4, '重复问题较多，请审核员确认是否需要合并。', 'PENDING', DATE_SUB(NOW(), INTERVAL 1 HOUR)),
+('ANSWER', 4, '先看 docker compose ps，再看 logs，最后确认端口、环境变量、数据库初始化和镜像源网络。', 5, '回答有帮助，误报演示用，可驳回。', 'PENDING', DATE_SUB(NOW(), INTERVAL 30 MINUTE));
+
+INSERT INTO like_record (user_id, target_type, target_id, create_time) VALUES
+(3, 'MATERIAL', 1, NOW()), (4, 'MATERIAL', 1, NOW()), (5, 'MATERIAL', 2, NOW()),
+(3, 'QUESTION', 1, NOW()), (4, 'QUESTION', 3, NOW()), (5, 'QUESTION', 3, NOW());
+
+INSERT INTO material_favorite (user_id, material_id, create_time) VALUES
+(3, 1, NOW()), (3, 2, NOW()), (4, 1, NOW()), (5, 5, NOW());
+
+INSERT INTO download_record (user_id, material_id, ip, create_time) VALUES
+(3, 1, '127.0.0.1', NOW()), (4, 1, '127.0.0.1', NOW()), (5, 2, '127.0.0.1', NOW()), (3, 5, '127.0.0.1', NOW());
+
+INSERT INTO ai_audit_record (target_type, target_id, audit_result, risk_score, reason, model_name, request_content, response_content, create_time) VALUES
+('MATERIAL', 1, 'PASS', 5.00, '词库审核通过', 'lexicon-audit', '软件工程课程设计验收模板', '词库审核通过', NOW()),
+('MATERIAL', 6, 'REJECT', 95.00, '命中敏感词：广告', 'lexicon-audit', '违规广告资料示例', '命中敏感词：广告', NOW()),
+('QUESTION', 1, 'PASS', 5.00, '词库审核通过', 'lexicon-audit', '软件工程答辩时怎么讲设计模式？', '词库审核通过', NOW());

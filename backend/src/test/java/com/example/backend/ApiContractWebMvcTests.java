@@ -117,7 +117,7 @@ class ApiContractWebMvcTests {
         when(aiAuditService.audit(eq("QUESTION"), eq("normal content"))).thenReturn(AiAuditResultVO.builder()
                 .auditResult("PASS")
                 .riskScore(new BigDecimal("0.10"))
-                .reason("Mock AI 审核通过")
+                .reason("词库审核通过")
                 .build());
 
         mockMvc.perform(post("/api/ai-audit/test")
@@ -130,7 +130,7 @@ class ApiContractWebMvcTests {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.auditResult").value("PASS"))
                 .andExpect(jsonPath("$.data.riskScore").value(0.10))
-                .andExpect(jsonPath("$.data.reason").value("Mock AI 审核通过"));
+                .andExpect(jsonPath("$.data.reason").value("词库审核通过"));
     }
 
     @Test

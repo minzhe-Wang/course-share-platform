@@ -52,10 +52,20 @@ powershell -ExecutionPolicy Bypass -File .\backend\scripts\api-smoke-test.ps1
 
 第一次运行、开发或排错时，可以按下面的目标查文档：
 
+| 你的身份 | 建议先看 |
+| --- | --- |
+| 老师或验收者 | `README.md`、`docs/Docker部署教程.md`、`docs/演示流程.md` |
+| 第一次运行项目的同学 | `docs/项目使用指南.md`、`docs/Docker部署教程.md` |
+| 参与开发的同学 | `docs/项目使用指南.md`、`docs/协作开发规范.md` |
+| 项目负责人 | `docs/协作开发规范.md`、`docs/任务分工与进度.md`、`docs/后续完善计划.md` |
+
 | 你要做什么 | 看哪个文档 |
 | --- | --- |
 | 第一次安装环境、拉取项目、运行项目 | `docs/项目使用指南.md` |
 | 只想用 Docker 一键部署 | `docs/Docker部署教程.md` |
+| 课堂展示或验收时按步骤演示 | `docs/演示流程.md` |
+| 参与小组开发、提交代码、提 PR | `docs/协作开发规范.md` |
+| 管理任务分工和后续进度 | `docs/任务分工与进度.md` |
 | 查看后端 Docker 配置、环境变量、健康检查 | `backend/DEPLOYMENT.md` |
 | 对接接口、导入 Apifox、查看请求和返回字段 | `docs/api接口文档.md` |
 | 理解数据库表结构、字段含义、初始化数据 | `docs/数据库设计.md` |
@@ -67,7 +77,9 @@ powershell -ExecutionPolicy Bypass -File .\backend\scripts\api-smoke-test.ps1
 
 ```text
 docs/项目使用指南.md
+-> docs/协作开发规范.md
 -> docs/Docker部署教程.md
+-> docs/演示流程.md
 -> docs/api接口文档.md
 -> docs/设计文档.md
 -> docs/数据库设计.md

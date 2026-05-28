@@ -15,6 +15,7 @@ public class MaterialDetailVO {
     private String categoryName;
     private List<TagVO> tags;
     private String fileUrl;
+    private String fileKey;
     private String fileType;
     private Long fileSize;
     private String uploaderName;

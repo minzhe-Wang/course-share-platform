@@ -1,6 +1,7 @@
 package com.example.backend.service.impl;
 
 import com.example.backend.entity.SysUser;
+import com.example.backend.exception.BusinessException;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.service.AuthService;
 import com.example.backend.utils.MockTokenUtils;
@@ -25,10 +26,10 @@ public class AuthServiceImpl implements AuthService {
         Long userId = MockTokenUtils.parseUserId(authorization);
         SysUser user = userMapper.findById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException(401, "\u7528\u6237\u4e0d\u5b58\u5728");
         }
         if (user.getStatus() == null || user.getStatus() != NORMAL_STATUS) {
-            throw new RuntimeException("用户已被禁用");
+            throw new BusinessException(403, "\u7528\u6237\u5df2\u88ab\u7981\u7528");
         }
         return user;
     }
@@ -37,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     public SysUser getEnabledStudent(String authorization, String forbiddenMessage) {
         SysUser user = getEnabledUser(authorization);
         if (!ROLE_STUDENT.equals(user.getRole())) {
-            throw new RuntimeException(forbiddenMessage);
+            throw new BusinessException(403, forbiddenMessage);
         }
         return user;
     }
@@ -46,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
     public SysUser getEnabledAdmin(String authorization, String forbiddenMessage) {
         SysUser user = getEnabledUser(authorization);
         if (!ROLE_ADMIN.equals(user.getRole())) {
-            throw new RuntimeException(forbiddenMessage);
+            throw new BusinessException(403, forbiddenMessage);
         }
         return user;
     }
@@ -55,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
     public SysUser getEnabledReviewerOrAdmin(String authorization, String forbiddenMessage) {
         SysUser user = getEnabledUser(authorization);
         if (!REVIEWER_OR_ADMIN.contains(user.getRole())) {
-            throw new RuntimeException(forbiddenMessage);
+            throw new BusinessException(403, forbiddenMessage);
         }
         return user;
     }

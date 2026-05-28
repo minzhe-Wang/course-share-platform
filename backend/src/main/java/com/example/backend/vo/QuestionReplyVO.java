@@ -6,6 +6,7 @@ import lombok.Data;
 public class QuestionReplyVO {
 
     private Long id;
+    private Long userId;
     private String content;
     private String userName;
     private String replyToUserName;
