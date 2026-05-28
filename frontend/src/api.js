@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'course-share-token'
+﻿const TOKEN_KEY = 'course-share-token'
 const USER_KEY = 'course-share-user'
 
 export function getStoredToken() {
@@ -29,10 +29,7 @@ export async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {})
   const token = getStoredToken()
 
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-
+  if (token) headers.set('Authorization', `Bearer ${token}`)
   if (options.body && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json; charset=utf-8')
   }
@@ -42,18 +39,14 @@ export async function apiRequest(path, options = {}) {
     response = await fetch(path, {
       ...options,
       headers,
-      body: options.body && !(options.body instanceof FormData)
-        ? JSON.stringify(options.body)
-        : options.body
+      body: options.body && !(options.body instanceof FormData) ? JSON.stringify(options.body) : options.body
     })
   } catch {
-    throw new Error('后端服务未连接，请先启动后端或 Docker Compose')
+    throw new Error('后端服务未连接，请确认 Docker Compose 或本地后端已经启动')
   }
 
   const text = await response.text()
-  if (!text) {
-    throw new Error(formatHttpError(response.status))
-  }
+  if (!text) throw new Error(formatHttpError(response.status))
 
   let result
   try {
@@ -61,15 +54,14 @@ export async function apiRequest(path, options = {}) {
   } catch {
     throw new Error(formatHttpError(response.status))
   }
-  if (result.code !== 200) {
-    throw new Error(normalizeErrorMessage(result.message))
-  }
+
+  if (result.code !== 200) throw new Error(normalizeErrorMessage(result.message))
   return result.data
 }
 
 function formatHttpError(status) {
   if (status >= 500) return '后端服务异常，请查看后端日志'
-  if (status === 404) return '接口不存在，请检查后端路由或 Nginx 代理'
+  if (status === 404) return '接口不存在，请检查后端路由或 Nginx 代理配置'
   return `请求失败：HTTP ${status}`
 }
 
@@ -83,7 +75,7 @@ function normalizeErrorMessage(message) {
     '<!doctype html',
     '<html'
   ]
-  if (technicalHints.some(hint => message.includes(hint))) {
+  if (technicalHints.some((hint) => message.includes(hint))) {
     return '后端依赖未就绪，请确认 MySQL、Redis、MinIO 和后端服务已启动'
   }
   return message

@@ -4,6 +4,7 @@ import com.example.backend.entity.Material;
 import com.example.backend.vo.AdminMaterialItemVO;
 import com.example.backend.vo.MaterialDetailVO;
 import com.example.backend.vo.MaterialListItemVO;
+import com.example.backend.vo.RecommendationItemVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -128,6 +129,7 @@ public interface MaterialMapper {
                 m.category_id,
                 c.name AS category_name,
                 m.file_url,
+                m.file_key,
                 m.file_type,
                 m.file_size,
                 u.nickname AS uploader_name,
@@ -327,4 +329,40 @@ public interface MaterialMapper {
             LIMIT #{limit}
             """)
     List<MaterialListItemVO> findHotMaterials(Integer limit);
+
+    @Select("""
+            SELECT
+                'MATERIAL' AS target_type,
+                m.id AS target_id,
+                m.title,
+                m.description,
+                c.name AS category_name,
+                (
+                    m.download_count * 3
+                    + m.favorite_count * 2
+                    + m.like_count * 2
+                    + m.view_count
+                    + CASE
+                        WHEN m.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 12
+                        WHEN m.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 6
+                        ELSE 0
+                      END
+                ) AS score,
+                CASE
+                    WHEN m.download_count >= 3 THEN '收藏和下载较多'
+                    WHEN m.favorite_count >= 3 THEN '收藏和下载较多'
+                    WHEN m.like_count >= 3 THEN '近期热度较高'
+                    WHEN m.view_count >= 5 THEN '近期热度较高'
+                    ELSE '适合优先查看'
+                END AS reason,
+                m.create_time
+            FROM material m
+            INNER JOIN course_category c ON c.id = m.category_id
+            WHERE m.audit_status = 'APPROVED'
+              AND m.status = 1
+            ORDER BY score DESC, m.create_time DESC, m.id DESC
+            LIMIT #{limit}
+            """)
+    List<RecommendationItemVO> findRecommendedMaterials(Integer limit);
 }
+

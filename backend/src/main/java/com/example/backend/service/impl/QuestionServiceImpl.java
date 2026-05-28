@@ -263,7 +263,7 @@ public class QuestionServiceImpl implements QuestionService {
                 .auditResult(auditResult.getAuditResult())
                 .riskScore(auditResult.getRiskScore())
                 .reason(auditResult.getReason())
-                .modelName("mock-ai-audit")
+                .modelName("lexicon-audit")
                 .requestContent(requestContent)
                 .responseContent(auditResult.getReason())
                 .build());

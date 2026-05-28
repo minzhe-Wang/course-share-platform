@@ -4,6 +4,7 @@ import com.example.backend.dto.ReportCreateDTO;
 import com.example.backend.dto.ReportHandleDTO;
 import com.example.backend.entity.Report;
 import com.example.backend.entity.SysUser;
+import com.example.backend.exception.BusinessException;
 import com.example.backend.mapper.ReportMapper;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.ReportService;
@@ -54,7 +55,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public PageResultVO<ReportListItemVO> listReports(Integer pageNum, Integer pageSize,
                                                       String handleStatus, String authorization) {
-        authService.getEnabledReviewerOrAdmin(authorization, "无权限处理举报");
+        authService.getEnabledReviewerOrAdmin(authorization, "\u65e0\u6743\u9650\u5904\u7406\u4e3e\u62a5");
         String normalizedStatus = normalizeNullableHandleStatus(handleStatus);
         int safePageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
         int safePageSize = pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 100);
@@ -70,13 +71,13 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportDetailVO getReportDetail(Long id, String authorization) {
-        authService.getEnabledReviewerOrAdmin(authorization, "无权限处理举报");
+        authService.getEnabledReviewerOrAdmin(authorization, "\u65e0\u6743\u9650\u5904\u7406\u4e3e\u62a5");
         if (id == null) {
-            throw new RuntimeException("举报不存在");
+            throw new BusinessException(404, "\u4e3e\u62a5\u4e0d\u5b58\u5728");
         }
         ReportDetailVO detail = reportMapper.findDetailById(id);
         if (detail == null) {
-            throw new RuntimeException("举报不存在");
+            throw new BusinessException(404, "\u4e3e\u62a5\u4e0d\u5b58\u5728");
         }
         return detail;
     }
@@ -84,13 +85,13 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public void handleReport(Long id, ReportHandleDTO reportHandleDTO, String authorization) {
-        SysUser handler = authService.getEnabledReviewerOrAdmin(authorization, "无权限处理举报");
+        SysUser handler = authService.getEnabledReviewerOrAdmin(authorization, "\u65e0\u6743\u9650\u5904\u7406\u4e3e\u62a5");
         Report report = reportMapper.findById(id);
         if (report == null) {
-            throw new RuntimeException("举报不存在");
+            throw new BusinessException(404, "\u4e3e\u62a5\u4e0d\u5b58\u5728");
         }
         if (!"PENDING".equals(report.getHandleStatus())) {
-            throw new RuntimeException("举报已处理");
+            throw new BusinessException(400, "\u4e3e\u62a5\u5df2\u5904\u7406");
         }
 
         String handleStatus = normalizeHandleStatus(reportHandleDTO.getHandleStatus());
@@ -110,7 +111,7 @@ public class ReportServiceImpl implements ReportService {
     private String normalizeTargetType(String targetType) {
         String normalizedType = targetType.trim().toUpperCase();
         if (!TARGET_TYPES.contains(normalizedType)) {
-            throw new RuntimeException("举报对象类型不支持");
+            throw new BusinessException(400, "\u4e3e\u62a5\u5bf9\u8c61\u7c7b\u578b\u4e0d\u652f\u6301");
         }
         return normalizedType;
     }
@@ -127,7 +128,7 @@ public class ReportServiceImpl implements ReportService {
             snapshot = reportMapper.findReplySnapshot(targetId);
         }
         if (!StringUtils.hasText(snapshot)) {
-            throw new RuntimeException("举报对象不存在");
+            throw new BusinessException(404, "\u4e3e\u62a5\u5bf9\u8c61\u4e0d\u5b58\u5728");
         }
         return snapshot.length() > 500 ? snapshot.substring(0, 500) : snapshot;
     }
@@ -140,7 +141,7 @@ public class ReportServiceImpl implements ReportService {
         if (!"PENDING".equals(normalizedStatus)
                 && !"RESOLVED".equals(normalizedStatus)
                 && !"REJECTED".equals(normalizedStatus)) {
-            throw new RuntimeException("处理状态不支持");
+            throw new BusinessException(400, "\u5904\u7406\u72b6\u6001\u4e0d\u652f\u6301");
         }
         return normalizedStatus;
     }
@@ -148,7 +149,7 @@ public class ReportServiceImpl implements ReportService {
     private String normalizeHandleStatus(String handleStatus) {
         String normalizedStatus = handleStatus.trim().toUpperCase();
         if (!"RESOLVED".equals(normalizedStatus) && !"REJECTED".equals(normalizedStatus)) {
-            throw new RuntimeException("处理状态不支持");
+            throw new BusinessException(400, "\u5904\u7406\u72b6\u6001\u4e0d\u652f\u6301");
         }
         return normalizedStatus;
     }
